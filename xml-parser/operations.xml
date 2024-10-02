@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<operations>
+    <operation>
+        <name>Addition</name>
+        <symbol>+</symbol>
+        <function>add</function>
+    </operation>
+    <operation>
+        <name>Subtraction</name>
+        <symbol>-</symbol>
+        <function>subtract</function>
+    </operation>
+    <operation>
+        <name>Multiplication</name>
+        <symbol>*</symbol>
+        <function>multiply</function>
+    </operation>
+    <operation>
+        <name>Division</name>
+        <symbol>/</symbol>
+        <function>divide</function>
+    </operation>
+</operations>
