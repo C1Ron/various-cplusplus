@@ -11,7 +11,7 @@ BOOST_INCLUDE = ~/downloads/boost_1_85_0
 TARGET = main
 
 # Source files
-SRCS = main.cpp SerialConnection.cpp FrameBuilder.cpp FrameInterpreter.cpp CommandHandler.cpp
+SRCS = main.cpp SerialConnection.cpp FrameBuilder.cpp FrameInterpreter.cpp CommandHandler.cpp SignalHandler.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)

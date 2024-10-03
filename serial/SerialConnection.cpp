@@ -12,10 +12,12 @@ SerialConnection::SerialConnection(const std::string& port, unsigned int baud_ra
     serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
 }
 
+
 void SerialConnection::sendFrame(const std::vector<uint8_t>& frame) 
 {
     boost::asio::write(serial, boost::asio::buffer(frame));
 }
+
 std::vector<uint8_t> SerialConnection::readFrame() 
 {
     std::vector<uint8_t> header(2);
@@ -40,5 +42,6 @@ std::vector<uint8_t> SerialConnection::readFrame(size_t size)
 
 SerialConnection::~SerialConnection() 
 {
+    std::cout << "Desctructor called" << std::endl;
     serial.close();
 }

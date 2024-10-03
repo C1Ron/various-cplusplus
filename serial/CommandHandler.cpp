@@ -111,7 +111,7 @@ void CommandHandler::processUserCommand(const std::string& command)
             std::cerr << "Unknown execute command: " << execName << std::endl;
         }
     } 
-    else if (cmd == "executeRamp") {
+    else if (cmd == "execute-ramp") {
         int32_t finalSpeed;
         uint16_t duration;
 

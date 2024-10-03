@@ -1,5 +1,42 @@
 #!/bin/bash
 
+## Handling multiple instances and cleanup ==========================================
+LOCKFILE="/tmp/virtual-msc.lock"
+
+# Function to handle cleanup on exit
+cleanup() {
+    echo "Cleaning up..."
+    # Remove the lock file
+    rm -f "$LOCKFILE"
+    echo "Lock file removed."
+    exit 0
+}
+
+# Trap the exit signal and remove the lock file
+trap cleanup EXIT
+
+# Check if the lock file exists and if the process is still running
+if [ -f "$LOCKFILE" ]; then
+    LOCKPID=$(cat "$LOCKFILE")
+    
+    # Check if the process with the stored PID is still running
+    if ps -p "$LOCKPID" > /dev/null 2>&1; then
+        echo "Another instance of the script is already running (PID $LOCKPID). Exiting..."
+        exit 1
+    else
+        echo "Lock file exists, but the process is not running. Cleaning up stale lock file."
+        rm -f "$LOCKFILE"
+    fi
+fi
+
+# Create the lock file and store the current script's PID in it
+echo $$ > "$LOCKFILE"
+
+# Your script's main logic goes here
+echo "Script is running with PID $$..."
+
+## Main script logic =================================================================
+
 # Ensure the device is passed as an argument
 if [ -z "$1" ]; then
     echo "Usage: $0 <device>"

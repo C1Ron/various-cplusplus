@@ -1,5 +1,6 @@
 #include "SerialConnection.h"
 #include "CommandHandler.h"
+#include "SignalHandler.h"
 #include <iostream>
 
 int main(int argc, char* argv[]) 
@@ -12,9 +13,14 @@ int main(int argc, char* argv[])
     const std::string port = argv[1];
 
     try {
-        // Open the serial port passed as argument
-        SerialConnection serial(port, 115200);
-        CommandHandler handler(serial);
+        // SerialConnection serial(port, 115200);
+
+        // Note that we need a pointer in order to implement the signal handler for cleanup.
+        SerialConnection* serial = new SerialConnection(port, 115200);
+        registerHandler(serial);
+
+
+        CommandHandler handler(*serial);
 
         std::string userCommand;
         while (true) {
@@ -27,6 +33,9 @@ int main(int argc, char* argv[])
 
             handler.processUserCommand(userCommand);
         }
+        // Optional cleanup (not needed since the signal handler will take care of it)
+        delete serial;
+
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
