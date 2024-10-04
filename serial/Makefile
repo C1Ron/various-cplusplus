@@ -4,8 +4,10 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -I$(BOOST_INCLUDE)
 
 # Boost library paths
 BOOST_LIBS = -lboost_system
-BOOST_LIB_PATH = ~/downloads/boost_1_85_0/stage/lib
-BOOST_INCLUDE = ~/downloads/boost_1_85_0
+# BOOST_LIB_PATH = ~/downloads/boost_1_85_0/stage/lib
+BOOST_LIB_PATH = ~/github/boost/stage/lib
+# BOOST_INCLUDE = ~/downloads/boost_1_85_0
+BOOST_INCLUDE = ~/github/boost
 
 # Output binary
 TARGET = main
