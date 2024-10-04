@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+message Person {
+    uint32 id = 1;
+    uint32 uid = 2;
+    string fname = 3;
+    string lname = 4;
+    google.protobuf.Timestamp bdate = 5;
+    string lang = 6;
+}
