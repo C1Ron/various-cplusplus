@@ -7,6 +7,9 @@ constexpr uint8_t predefinedMotorID = 1;
 
 // Map string names to ST_MPC::RegisterId
 std::unordered_map<std::string, ST_MPC::RegisterId> registerIdMap = {
+    {"Flags", ST_MPC::RegisterId::Flags},
+    {"Status", ST_MPC::RegisterId::Status},
+    {"ControlMode", ST_MPC::RegisterId::ControlMode},
     {"SpeedKp", ST_MPC::RegisterId::SpeedKp},
     {"SpeedKi", ST_MPC::RegisterId::SpeedKi},
     {"SpeedKd", ST_MPC::RegisterId::SpeedKd},
