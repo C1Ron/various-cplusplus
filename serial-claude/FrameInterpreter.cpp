@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <iostream>
 
-
 std::string FrameInterpreter::interpretResponse(const std::vector<uint8_t>& response) 
 {
     if (response.size() < 3) {
@@ -17,14 +16,19 @@ std::string FrameInterpreter::interpretResponse(const std::vector<uint8_t>& resp
         return "Invalid response length.";
     }
 
+    // Example logic to determine whether to treat the payload as int16 or int32
+    // You will need to replace this logic with your own based on your application
+    bool isInt16 = (startFrame == 0xF0 && payloadLength == 2); // Adjust as needed
+
     if (startFrame == 0xF0) {
-        return interpretSuccessResponse(response);
+        return interpretSuccessResponse(response, isInt16);
     } else if (startFrame == 0xFF) {
         return interpretErrorResponse(response);
     }
 
     return "Unknown response format.";
 }
+
 
 void FrameInterpreter::printResponse(const std::vector<uint8_t>& response) const
 {
@@ -34,7 +38,7 @@ void FrameInterpreter::printResponse(const std::vector<uint8_t>& response) const
     std::cout << std::endl;
 }
 
-std::string FrameInterpreter::interpretSuccessResponse(const std::vector<uint8_t>& response) const
+std::string FrameInterpreter::interpretSuccessResponse(const std::vector<uint8_t>& response, bool isInt16) const
 {
     uint8_t payloadLength = response[1];
     std::stringstream ss;
@@ -43,15 +47,54 @@ std::string FrameInterpreter::interpretSuccessResponse(const std::vector<uint8_t
     if (payloadLength == 0) {
         ss << "No payload.";
     } else {
-        uint32_t value = 0;
-        for (size_t i = 0; i < payloadLength && i < 4; ++i) {
-            value |= static_cast<uint32_t>(response[2 + i]) << (8 * i);
+        if (isInt16) {
+            // Handle signed 16-bit integer interpretation
+            if (payloadLength != 2) {
+                ss << "Invalid payload length for int16.";
+                return ss.str();
+            }
+
+            // Combine bytes into a signed 16-bit integer (little-endian)
+            int16_t value = (static_cast<int16_t>(response[2 + 1]) << 8) | static_cast<int16_t>(response[2]);
+
+            ss << "Raw payload: ";
+            for (size_t i = 2; i < 4; ++i) {
+                ss << std::hex << "0x" << static_cast<int>(response[i]) << " "; // Keep hex for raw payload
+            }
+
+            // Output the interpreted value
+            ss << "\nInterpreted value: " << std::dec << value;  // Show as decimal
+
+        } else {
+            // Handle signed 32-bit integer interpretation
+            uint32_t unsignedValue = 0;
+
+            for (size_t i = 0; i < static_cast<size_t>(payloadLength) && i < 4; ++i) {
+                unsignedValue |= static_cast<uint32_t>(response[2 + i]) << (8 * i);
+            }
+
+            // Convert to signed integer
+            int32_t value = static_cast<int32_t>(unsignedValue);
+            if (value < 0) {
+                value -= 4294967296;  // Adjust for two's complement (2^32)
+            }
+
+            // Print raw payload for debugging
+            ss << "Raw payload: ";
+            for (size_t i = 2; i < 2 + static_cast<size_t>(payloadLength); ++i) {
+                ss << std::hex << "0x" << static_cast<int>(response[i]) << " "; // Keep hex for raw payload
+            }
+
+            // Print the interpreted value in decimal
+            ss << "\nInterpreted value: " << std::dec << value;  // Show as decimal
         }
-        ss << value;
     }
 
     return ss.str();
 }
+
+
+
 
 std::string FrameInterpreter::interpretErrorResponse(const std::vector<uint8_t>& response) const
 {

@@ -16,26 +16,16 @@ int main(int argc, char* argv[])
 
     try {
         SerialConnection serial(port, 115200);
-
-        // Create CommandHandler
         CommandHandler handler(serial);
 
-        // Initialize FastLogger with CommandHandler
         FastLogger logger(serial, handler, "log.csv");
-
-        // Add registers to log
         logger.addRegister(ST_MPC::RegisterId::SpeedRef);
         logger.addRegister(ST_MPC::RegisterId::TorqueKp);
-
-        // Start the logger
         logger.startLogging();
-        std::cout << "Logging started..." << std::endl;
 
-        // Start the command line interface
         CommandLine cli(serial);
         cli.run();
 
-        // Stop the logger after CommandLine exits
         logger.stopLogging();
         std::cout << "Logging stopped." << std::endl;
 

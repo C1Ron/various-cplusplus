@@ -9,10 +9,10 @@ class FrameInterpreter
 {
 public:
     std::string interpretResponse(const std::vector<uint8_t>& response);
-    void printResponse(const std::vector<uint8_t>& response) const;  // Make sure this line is present
+    void printResponse(const std::vector<uint8_t>& response) const;
 
 private:
-    std::string interpretSuccessResponse(const std::vector<uint8_t>& response) const;
+    std::string interpretSuccessResponse(const std::vector<uint8_t>& response, bool isInt16) const; // Updated
     std::string interpretErrorResponse(const std::vector<uint8_t>& response) const;
     std::string byteToHexString(uint8_t byte) const;
 };
