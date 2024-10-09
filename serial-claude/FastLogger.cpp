@@ -25,6 +25,16 @@ void FastLogger::addRegister(ST_MPC::RegisterId regId)
     m_registers.push_back(regId);
 }
 
+bool FastLogger::removeRegister(ST_MPC::RegisterId regId) 
+{
+    auto it = std::find(m_registers.begin(), m_registers.end(), regId);
+    if (it != m_registers.end()) {
+        m_registers.erase(it);
+        return true;
+    }
+    return false;  // Register not found
+}
+
 void FastLogger::startLogging()
 {
     if (!m_isRunning.exchange(true)) {  // Start only if not already running

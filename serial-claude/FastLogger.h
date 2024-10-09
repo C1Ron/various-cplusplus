@@ -17,6 +17,7 @@ public:
     ~FastLogger();
 
     void addRegister(ST_MPC::RegisterId regId);
+    bool removeRegister(ST_MPC::RegisterId regId);
     void startLogging();
     void stopLogging();
 

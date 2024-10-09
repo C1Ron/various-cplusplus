@@ -21,6 +21,11 @@ int main(int argc, char* argv[])
         FastLogger logger(serial, handler, "log.csv");
         logger.addRegister(ST_MPC::RegisterId::SpeedRef);
         logger.addRegister(ST_MPC::RegisterId::TorqueKp);
+
+        if (!logger.removeRegister(ST_MPC::RegisterId::TorqueKp)) {
+            std::cerr << "Could not remove register" << std::endl;
+        }
+
         logger.startLogging();
 
         CommandLine cli(serial);

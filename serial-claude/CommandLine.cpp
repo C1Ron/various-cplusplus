@@ -27,7 +27,6 @@ void CommandLine::run()
             break;
         }
     }
-    std::cout << "CommandLine run loop ended" << std::endl;
 }
 
 
