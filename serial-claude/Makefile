@@ -39,7 +39,7 @@ $(OBJDIR):
 
 # Clean target
 clean:
-	rm -rf $(OBJDIR) $(EXECUTABLE)
+	rm -rf $(OBJDIR) $(EXECUTABLE) log.csv
 
 # Phony targets
 .PHONY: all clean
