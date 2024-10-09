@@ -10,9 +10,6 @@ FastLogger::FastLogger(SerialConnection& serial, CommandHandler& handler, const 
     if (!m_logFile.is_open()) {
         throw std::runtime_error("Unable to open log file: " + logFile);
     }
-
-    // Write the header immediately
-    writeHeader();
 }
 
 FastLogger::~FastLogger()
