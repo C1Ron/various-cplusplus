@@ -65,7 +65,7 @@ void FastLogger::writeHeader()
     
     m_logFile << "time"; // Start with the time column
     for (const auto& regId : m_registers) {
-        m_logFile << ", reg-" << static_cast<int>(regId); // Create header entries for each register
+        m_logFile << ",reg-" << static_cast<int>(regId); // Create header entries for each register
     }
     m_logFile << "\n"; // End the header line
     m_logFile.flush(); // Ensure the header is written to the file
