@@ -20,9 +20,14 @@ FastLogger::~FastLogger()
     }
 }
 
-void FastLogger::addRegister(ST_MPC::RegisterId regId)
+bool FastLogger::addRegister(ST_MPC::RegisterId regId) 
 {
-    m_registers.push_back(regId);
+
+    if (std::find(m_registers.begin(), m_registers.end(), regId) == m_registers.end()) {
+        m_registers.push_back(regId);
+        return true;
+    }
+    return false;
 }
 
 bool FastLogger::removeRegister(ST_MPC::RegisterId regId) 

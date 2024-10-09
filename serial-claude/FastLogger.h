@@ -16,7 +16,7 @@ public:
     FastLogger(SerialConnection& serial, CommandHandler& handler, const std::string& logFile);
     ~FastLogger();
 
-    void addRegister(ST_MPC::RegisterId regId);
+    bool addRegister(ST_MPC::RegisterId regId);
     bool removeRegister(ST_MPC::RegisterId regId);
     void startLogging();
     void stopLogging();

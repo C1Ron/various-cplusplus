@@ -15,6 +15,10 @@ public:
     CommandHandler(SerialConnection& conn);
     ~CommandHandler();
     void processUserCommand(const std::string& command);
+    const std::unordered_map<std::string, ST_MPC::RegisterId>& getRegisterIdMap() const
+    {
+        return registerIdMap;
+    }
     const std::unordered_map<ST_MPC::RegisterId, ST_MPC::RegisterType>& getRegisterTypeMap() const 
     { 
         return registerTypeMap; 
