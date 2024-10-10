@@ -1,5 +1,5 @@
-#ifndef VIRTUALUART2_H
-#define VIRTUALUART2_H
+#ifndef VIRTUALUART_H
+#define VIRTUALUART_H
 
 #include <thread>
 #include <string>

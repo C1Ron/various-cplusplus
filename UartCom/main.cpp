@@ -1,6 +1,6 @@
 #include <iostream>
 #include "UartApplication.h"
-#include "VirtualUart2.h"
+#include "VirtualUart.h"
 
 void showUsage()
 {
