@@ -13,6 +13,7 @@ public:
     void ScanArguments(int argc, const char** argv);
     void Execute();
     int Open();
+    void Close();
     void Write(const std::string& msg);
     std::string Read(int n_bytes);
     void Help() const;

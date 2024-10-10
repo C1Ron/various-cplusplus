@@ -11,8 +11,8 @@ TARGET3 = uart-cli
 
 # Source Files for each target
 SRCS = UartCom.cpp UartApplication.cpp uart-com.cpp
-SRCS2 = UartCom.cpp UartApplication.cpp VirtualUart2.cpp uart-com-sim.cpp
-SRCS3 = UartCom.cpp UartApplication.cpp VirtualUart2.cpp main.cpp
+SRCS2 = UartCom.cpp UartApplication.cpp VirtualUart.cpp uart-com-sim.cpp
+SRCS3 = UartCom.cpp UartApplication.cpp VirtualUart.cpp main.cpp
 
 # Object Files (generated automatically from SRCS)
 OBJS = $(SRCS:.cpp=.o)
@@ -21,8 +21,8 @@ OBJS3 = $(SRCS3:.cpp=.o)
 
 # Header Files for dependency checking
 HDRS = UartComIF.h UartCom.h UartApplication.h 
-HDRS2 = UartComIF.h UartCom.h UartApplication.h VirtualUart2.h
-HDRS3 = UartComIF.h UartCom.h UartApplication.h VirtualUart2.h
+HDRS2 = UartComIF.h UartCom.h UartApplication.h VirtualUart.h
+HDRS3 = UartComIF.h UartCom.h UartApplication.h VirtualUart.h
 
 # Build all three targets
 all: $(TARGET) $(TARGET2) $(TARGET3)

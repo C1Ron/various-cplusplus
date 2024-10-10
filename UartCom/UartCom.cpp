@@ -41,12 +41,10 @@ int UartCom::ConfigureInterfaceAttributes(int fd, int baudrate, int timeoutTenth
 int UartCom::Open(const char* device, int* handle)
 {
     *handle = open(device, O_RDWR | O_NOCTTY | O_SYNC);
-
     if (*handle < 0) {
         std::cerr << "Error opening " << device << ": " << strerror(errno) << std::endl;
         return -1;
     }
-
     return 0;
 }
 
@@ -61,16 +59,14 @@ int UartCom::Close(int* handle)
 
 int UartCom::Write(const uint8_t* buffer, size_t bufferLength, int handle)
 {
-    int wlen = write(handle, buffer, bufferLength);
-    if (wlen == -1) {
-        std::cerr << "Error from write: " << strerror(errno) << std::endl;
+    ssize_t bytesWritten = write(handle, buffer, bufferLength);
+    if (bytesWritten < 0) {
+        std::cerr << "Error writing to UART: " << strerror(errno) << std::endl;
         return -1;
-    } else if (wlen < static_cast<int>(bufferLength)) {
-        std::cerr << "Warning: Written bytes (" << wlen << ") less than expected (" << bufferLength << ")" << std::endl;
-        return wlen;
     }
-    return wlen;
+    return bytesWritten;
 }
+
 
 
 int UartCom::Read(uint8_t* buffer, const size_t nBytes, const int fd)
@@ -111,9 +107,6 @@ int UartCom::Read(uint8_t* buffer, const size_t nBytes, const int fd)
 
     return rdlen;
 }
-
-
-
 
 int UartCom::Read(uint8_t* buffer, int fd)
 {

@@ -1,5 +1,5 @@
 #include "UartCom.h"
-#include "VirtualUart2.h"
+#include "VirtualUart.h"
 #include <iostream>
 
 int main() {
