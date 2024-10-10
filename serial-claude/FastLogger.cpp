@@ -138,7 +138,7 @@ void FastLogger::loggingThread()
 
         m_logFile << "\n";
         m_logFile.flush();  // Ensure each log entry is written immediately
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Adjust interval as needed
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));  // Adjust interval as needed
     }
 }
 
