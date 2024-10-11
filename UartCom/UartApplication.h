@@ -3,6 +3,7 @@
 
 #include "UartCom.h"
 #include <string>
+#include <functional>
 
 class UartApplication
 {
@@ -10,27 +11,35 @@ public:
     UartApplication();
     ~UartApplication();
 
-    void ScanArguments(int argc, const char** argv);
-    void Execute();
-    int Open();
-    void Close();
-    void Write(const std::string& msg);
-    std::string Read(int n_bytes);
-    void Help() const;
+    // Configuration
+    void SetUartDevice(const std::string& uartDevice);
+    std::string GetUartDevice() const;
 
-    // Setters for UART Read and Write devices
-    void SetUartRead(const std::string& uartRead);   // Setter for UART read device
-    void SetUartWrite(const std::string& uartWrite); // Setter for UART write device
+    // Command-line argument parsing
+    void ParseArguments(int argc, const char** argv);
+
+    // UART operations
+    void OpenUart();
+    void CloseUart();
+    void WriteToUart(const std::string& message);
+    std::string ReadFromUart(int numBytes);
+
+    // Execution
+    void Execute();
+
+    // Help
+    static void ShowUsage();
 
 private:
-    std::string fUart;       // The current UART device used for operations
-    std::string fMessageWrite;  // Message to write
-    bool fReadMode = false;   // Whether the application is in read mode
-    UartCom fUartCom;         // UART communication object
-    int fHandle = 0;          // File descriptor for the UART device
+    std::string m_uartDevice;
+    std::string m_messageToWrite;
+    bool m_isReadMode;
+    UartCom m_uartCom;
+    int m_uartHandle;
 
-    std::string fUartRead;    // UART device for reading (from VirtualUart)
-    std::string fUartWrite;   // UART device for writing (from VirtualUart)
+    // Helper methods
+    void ValidateArguments() const;
+    void EnsureUartIsOpen();
 };
 
 #endif // UARTAPPLICATION_H
