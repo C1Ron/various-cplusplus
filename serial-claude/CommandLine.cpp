@@ -128,13 +128,16 @@ void CommandLine::handleExit() {
 
 void CommandLine::handleHelp() {
     std::cout << "Available commands:" << std::endl;
-    std::cout << "  help               - Display this help message" << std::endl;
-    std::cout << "  exit               - Exit the program" << std::endl;
-    std::cout << "  log-start          - Start logging" << std::endl;
-    std::cout << "  log-stop           - Stop logging" << std::endl;
-    std::cout << "  log-add <reg>     - Add register to logging" << std::endl;
-    std::cout << "  log-remove <reg>  - Remove register from logging" << std::endl;
-    // Add any other commands here...
+    std::cout << "  help                        - Display this help message" << std::endl;
+    std::cout << "  exit                        - Exit the program" << std::endl;
+    std::cout << "  get  <reg>                  - Get register" << std::endl;
+    std::cout << "  set  <reg> <val>            - Set register" << std::endl;
+    std::cout << "  exec <cmd>                  - Execute cmd" << std::endl;
+    std::cout << "  ramp <speed> <duration>     - Execute ramp" << std::endl;
+    std::cout << "  log-start                   - Start logging" << std::endl;
+    std::cout << "  log-stop                    - Stop logging" << std::endl;
+    std::cout << "  log-add <reg>               - Add register to logging" << std::endl;
+    std::cout << "  log-remove <reg>            - Remove register from logging" << std::endl;
 }
 
 
