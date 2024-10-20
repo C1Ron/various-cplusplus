@@ -4,6 +4,7 @@
 #include "SerialConnection.h"
 #include "CommandHandler.h"
 #include "FastLogger.h"
+#include "TurboLogger.h"
 #include <string>
 #include <unordered_map>
 #include <functional>

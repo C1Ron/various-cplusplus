@@ -2,6 +2,7 @@
 #include "SerialConnection.h"
 #include "SignalHandler.h"
 #include "FastLogger.h"
+#include "TurboLogger.h"
 #include "CommandHandler.h"
 #include <iostream>
 
