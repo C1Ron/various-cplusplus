@@ -50,16 +50,16 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn) {
 }
 
 // Alternative constructor for initializing with a Logger instance
-CommandHandler::CommandHandler(SerialConnection& conn, Logger& logger) : CommandHandler(conn) 
+CommandHandler::CommandHandler(SerialConnection& conn, Logger& loggerRef) : CommandHandler(conn) 
 {
-    this->logger = &logger;
+    logger = &loggerRef;
 
     // Add logger-specific commands
-    commandMap["logstart"] = [this](const auto& args) { return handleLogStart(args); };
-    commandMap["logstop"] = [this](const auto& args) { return handleLogStop(args); };
-    commandMap["logadd"] = [this](const auto& args) { return handleLogAdd(args); };
-    commandMap["logremove"] = [this](const auto& args) { return handleLogRemove(args); };
-    commandMap["logstatus"] = [this](const auto& args) { return handleLogStatus(args); };
+    commandMap["log-start"] = [this](const auto& args) { return handleLogStart(args); };
+    commandMap["log-stop"] = [this](const auto& args) { return handleLogStop(args); };
+    commandMap["log-add"] = [this](const auto& args) { return handleLogAdd(args); };
+    commandMap["log-remove"] = [this](const auto& args) { return handleLogRemove(args); };
+    commandMap["log-status"] = [this](const auto& args) { return handleLogStatus(args); };
 }
 
 CommandHandler::CommandResult CommandHandler::processCommand(const std::string& command) {
@@ -217,7 +217,7 @@ CommandHandler::CommandResult CommandHandler::handleLogAdd(const std::vector<std
         return {false, "Unknown register: " + args[0]};
     }
     
-    if (logger->addRegister(args[0], regInfo->id)) {
+    if (logger->addRegister(args[0], regInfo->id, regInfo->type)) {  // Pass the type as well
         return {true, "Added register '" + args[0] + "' to logging"};
     }
     return {false, "Register '" + args[0] + "' is already being logged"};

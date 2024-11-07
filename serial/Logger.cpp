@@ -1,8 +1,10 @@
 #include "Logger.h"
 #include "FrameBuilder.h"
-#include <iomanip>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
+
+std::mutex Logger::readMutex;  // Define static mutex
 
 Logger::Logger(SerialConnection& serial, const LogConfig& config)
     : serial(serial), config(config) {
@@ -20,7 +22,21 @@ Logger::~Logger() {
     }
 }
 
-bool Logger::addRegister(const std::string& regName, ST_MPC::RegisterId regId) {
+void Logger::start() {
+    if (!running.exchange(true)) {
+        writeHeader();
+        loggerThread = std::thread(&Logger::loggingThread, this);
+    }
+}
+
+void Logger::stop() {
+    running.store(false);
+    if (loggerThread.joinable()) {
+        loggerThread.join();
+    }
+}
+
+bool Logger::addRegister(const std::string& regName, ST_MPC::RegisterId regId, ST_MPC::RegisterType type) {
     std::lock_guard<std::mutex> lock(registersMutex);
     
     // Check if register already exists
@@ -31,10 +47,10 @@ bool Logger::addRegister(const std::string& regName, ST_MPC::RegisterId regId) {
         return false;
     }
 
-    RegisterInfo info{regId, ST_MPC::RegisterType::Int32, regName}; // Default to Int32
+    RegisterInfo info{regId, type, regName};
     registers.push_back(info);
     
-    // If logging is active, update the header
+    // If logging is active, rewrite the header
     if (running.load()) {
         writeHeader();
     }
@@ -54,26 +70,12 @@ bool Logger::removeRegister(const std::string& regName) {
 
     registers.erase(it);
     
-    // If logging is active, update the header
+    // If logging is active, rewrite the header
     if (running.load()) {
         writeHeader();
     }
     
     return true;
-}
-
-void Logger::start() {
-    if (!running.exchange(true)) {
-        writeHeader();
-        loggerThread = std::thread(&Logger::loggingThread, this);
-    }
-}
-
-void Logger::stop() {
-    running.store(false);
-    if (loggerThread.joinable()) {
-        loggerThread.join();
-    }
 }
 
 std::vector<std::string> Logger::getLoggedRegisters() const {
@@ -87,94 +89,169 @@ std::vector<std::string> Logger::getLoggedRegisters() const {
 }
 
 void Logger::writeHeader() {
-    std::lock_guard<std::mutex> lock(logMutex);
+    std::lock_guard<std::mutex> lock(registersMutex);
     logFile.seekp(0);
     logFile.clear();
-    
-    if (config.useTimestamp) {
-        logFile << "Timestamp,";
+
+    if (registers.empty()) {
+        return;
     }
-    
-    std::lock_guard<std::mutex> regLock(registersMutex);
-    for (size_t i = 0; i < registers.size(); ++i) {
-        logFile << registers[i].name;
-        if (i < registers.size() - 1) {
+
+    if (config.useTimestamp) {
+        logFile << "Timestamp";
+    }
+
+    for (const auto& reg : registers) {
+        if (config.useTimestamp || &reg != &registers.front()) {
             logFile << ",";
+        }
+        logFile << reg.name;
+    }
+    logFile << "\n";
+    logFile.flush();
+}
+
+void Logger::writeLogLine(const std::chrono::system_clock::time_point& timestamp,
+                         const std::map<std::string, int32_t>& values) {
+    if (config.useTimestamp) {
+        auto ts = std::chrono::duration_cast<std::chrono::microseconds>(
+            timestamp.time_since_epoch()).count();
+        logFile << ts;
+    }
+
+    std::lock_guard<std::mutex> lock(registersMutex);
+    for (const auto& reg : registers) {
+        if (config.useTimestamp || &reg != &registers.front()) {
+            logFile << ",";
+        }
+        auto it = values.find(reg.name);
+        if (it != values.end()) {
+            logFile << it->second;
         }
     }
     logFile << "\n";
     logFile.flush();
 }
 
-void Logger::writeEntry(const LogEntry& entry) {
-    std::lock_guard<std::mutex> lock(logMutex);
-    
-    if (config.useTimestamp) {
-        auto timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
-            entry.timestamp.time_since_epoch()).count();
-        logFile << timestamp << ",";
-    }
-    
-    logFile << entry.value << "\n";
-    logFile.flush();
-}
-
 int32_t Logger::readRegisterValue(const RegisterInfo& reg) {
-    FrameBuilder frameBuilder;
-    auto frame = frameBuilder.buildGetRegisterFrame(1, reg.id);
-    serial.sendFrame(frame);
-    auto response = serial.readFrame();
-    
-    // Basic response validation
-    if (response.size() < 4) {
-        throw std::runtime_error("Invalid response size");
+    std::lock_guard<std::mutex> lock(readMutex);
+
+    try {
+        FrameBuilder frameBuilder;
+        auto frame = frameBuilder.buildGetRegisterFrame(1, reg.id);
+        serial.sendFrame(frame);
+        auto response = serial.readFrame();
+
+        if (response.size() < 4) {
+            throw std::runtime_error("Invalid response size");
+        }
+
+        if (response[0] != 0xF0) {
+            throw std::runtime_error("Register read failed");
+        }
+
+        uint8_t payloadLength = response[1];
+        
+        if (response.size() != static_cast<size_t>(payloadLength) + 3) {
+            throw std::runtime_error("Invalid response length");
+        }
+
+        int32_t value = 0;
+        switch (reg.type) {
+            case ST_MPC::RegisterType::UInt8:
+                if (payloadLength != 1) throw std::runtime_error("Invalid payload length for UInt8");
+                value = response[2];
+                break;
+
+            case ST_MPC::RegisterType::Int16:
+                if (payloadLength != 2) throw std::runtime_error("Invalid payload length for Int16");
+                value = static_cast<int16_t>(
+                    response[2] | 
+                    (response[3] << 8)
+                );
+                break;
+
+            case ST_MPC::RegisterType::UInt16:
+                if (payloadLength != 2) throw std::runtime_error("Invalid payload length for UInt16");
+                value = static_cast<uint16_t>(
+                    response[2] | 
+                    (response[3] << 8)
+                );
+                break;
+
+            case ST_MPC::RegisterType::Int32:
+                if (payloadLength != 4) throw std::runtime_error("Invalid payload length for Int32");
+                value = static_cast<int32_t>(
+                    response[2] | 
+                    (response[3] << 8) |
+                    (response[4] << 16) | 
+                    (response[5] << 24)
+                );
+                break;
+
+            case ST_MPC::RegisterType::UInt32:
+                if (payloadLength != 4) throw std::runtime_error("Invalid payload length for UInt32");
+                value = static_cast<uint32_t>(
+                    response[2] | 
+                    (response[3] << 8) |
+                    (response[4] << 16) | 
+                    (response[5] << 24)
+                );
+                break;
+        }
+        
+        return value;
     }
-    
-    // Extract value based on type
-    int32_t value = 0;
-    switch (reg.type) {
-        case ST_MPC::RegisterType::UInt8:
-            value = response[2];
-            break;
-        case ST_MPC::RegisterType::Int16:
-            value = static_cast<int16_t>(response[2] | (response[3] << 8));
-            break;
-        case ST_MPC::RegisterType::UInt16:
-            value = static_cast<uint16_t>(response[2] | (response[3] << 8));
-            break;
-        case ST_MPC::RegisterType::Int32:
-            value = static_cast<int32_t>(response[2] | (response[3] << 8) |
-                                       (response[4] << 16) | (response[5] << 24));
-            break;
-        case ST_MPC::RegisterType::UInt32:
-            value = static_cast<uint32_t>(response[2] | (response[3] << 8) |
-                                        (response[4] << 16) | (response[5] << 24));
-            break;
+    catch (const std::exception& e) {
+        throw std::runtime_error(std::string("Failed to read register: ") + e.what());
     }
-    
-    return value;
 }
 
 void Logger::loggingThread() {
     while (running.load()) {
-        auto timestamp = std::chrono::system_clock::now();
-        
-        std::vector<RegisterInfo> currentRegisters;
-        {
-            std::lock_guard<std::mutex> lock(registersMutex);
-            currentRegisters = registers;  // Copy for thread safety
-        }
-        
-        for (const auto& reg : currentRegisters) {
-            try {
-                int32_t value = readRegisterValue(reg);
-                LogEntry entry{timestamp, reg.name, value};
-                writeEntry(entry);
-            } catch (const std::exception& e) {
-                std::cerr << "Error reading register " << reg.name << ": " << e.what() << std::endl;
+        try {
+            auto timestamp = std::chrono::system_clock::now();
+            std::map<std::string, int32_t> values;
+
+            // Take a snapshot of registers with minimal lock time
+            std::vector<RegisterInfo> regs;
+            {
+                std::lock_guard<std::mutex> lock(registersMutex);
+                regs = registers;
             }
+
+            if (regs.empty()) {
+                std::this_thread::sleep_for(config.sampleInterval);
+                continue;
+            }
+
+            // Read all registers without locking
+            for (const auto& reg : regs) {
+                try {
+                    FrameBuilder frameBuilder;
+                    auto frame = frameBuilder.buildGetRegisterFrame(1, reg.id);
+                    serial.sendFrame(frame);
+                    auto response = serial.readFrame();
+
+                    if (response.size() >= 4 && response[0] == 0xF0) {
+                        values[reg.name] = extractValue(response, reg.type);
+                    }
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "Error reading " << reg.name << ": " << e.what() << std::endl;
+                }
+            }
+
+            // Write values if we got any
+            if (!values.empty()) {
+                writeLogLine(timestamp, values);
+            }
+
+            std::this_thread::sleep_for(config.sampleInterval);
         }
-        
-        std::this_thread::sleep_for(config.sampleInterval);
+        catch (const std::exception& e) {
+            std::cerr << "Logger error: " << e.what() << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 }

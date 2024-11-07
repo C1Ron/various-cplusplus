@@ -10,6 +10,11 @@
 
 class SerialConnection {
 public:
+    class ReadError : public std::runtime_error {
+    public:
+        explicit ReadError(const std::string& msg) : std::runtime_error(msg) {}
+    };
+
     SerialConnection(const std::string& port, unsigned int baud_rate);
     ~SerialConnection();
 
@@ -23,10 +28,10 @@ private:
     boost::asio::io_service io;
     boost::asio::serial_port serial;
     std::chrono::milliseconds readTimeout{1000}; // Default 1 second timeout
-    std::mutex serialMutex;  // Protect serial port access
-
-    void configurePort(unsigned int baud_rate);
+    std::mutex serialMutex;
+    
     std::vector<uint8_t> readWithTimeout(size_t size);
+    void configurePort(unsigned int baud_rate);
 };
 
 #endif // SERIAL_CONNECTION_H
