@@ -1,89 +1,137 @@
 #include "FrameBuilder.h"
+#include <sstream>
 
-std::vector<uint8_t> FrameBuilder::buildSetRegisterFrame(uint8_t motorID, ST_MPC::RegisterId regID, const std::vector<uint8_t>& regVal) 
-{
-    std::vector<uint8_t> frame;
-
-    uint8_t frameStart = (motorID << 5) | static_cast<uint8_t>(ST_MPC::CommandId::SetRegister);
-    uint8_t payloadLength = 1 + regVal.size();
-
-    frame.push_back(frameStart);
-    frame.push_back(payloadLength);
-    frame.push_back(static_cast<uint8_t>(regID)); // Use the enum for RegisterId
-    frame.insert(frame.end(), regVal.begin(), regVal.end()); // Register value
-
-    uint8_t crc = calculateCRC(frame);
-    frame.push_back(crc);
-
+std::vector<uint8_t> FrameBuilder::FrameData::complete() {
+    frame.push_back(calculateCRC());
     return frame;
 }
 
-std::vector<uint8_t> FrameBuilder::buildGetRegisterFrame(uint8_t motorID, ST_MPC::RegisterId regID) 
-{
-    std::vector<uint8_t> frame;
-    uint8_t frameStart = (motorID << 5) | static_cast<uint8_t>(ST_MPC::CommandId::GetRegister);
-
-    frame.push_back(frameStart);
-    frame.push_back(0x01); // Payload length = 1
-    frame.push_back(static_cast<uint8_t>(regID)); // Use the enum for RegisterId
-
-    uint8_t crc = calculateCRC(frame);
-    frame.push_back(crc);
-
-    return frame;
-}
-
-std::vector<uint8_t> FrameBuilder::buildExecuteFrame(uint8_t motorID, ST_MPC::ExecuteId execID) 
-{
-    std::vector<uint8_t> frame;
-
-    uint8_t frameStart = (motorID << 5) | static_cast<uint8_t>(ST_MPC::CommandId::Execute);
-    frame.push_back(frameStart);
-    frame.push_back(0x01); // Payload length = 1
-    frame.push_back(static_cast<uint8_t>(execID)); // Use the enum for ExecuteId
-
-    uint8_t crc = calculateCRC(frame);
-    frame.push_back(crc);
-
-    return frame;
-}
-
-std::vector<uint8_t> FrameBuilder::buildExecuteRampFrame(uint8_t motorID, int32_t finalSpeed, uint16_t duration) 
-{
-    std::vector<uint8_t> frame;
-
-    uint8_t frameStart = (motorID << 5) | static_cast<uint8_t>(ST_MPC::CommandId::ExecuteRamp);
-    frame.push_back(frameStart);
-
-    frame.push_back(0x06); // Payload length = 6
-
-    frame.push_back(static_cast<uint8_t>(finalSpeed & 0xFF));
-    frame.push_back(static_cast<uint8_t>((finalSpeed >> 8) & 0xFF));
-    frame.push_back(static_cast<uint8_t>((finalSpeed >> 16) & 0xFF));
-    frame.push_back(static_cast<uint8_t>((finalSpeed >> 24) & 0xFF));
-    frame.push_back(static_cast<uint8_t>(duration & 0xFF));
-    frame.push_back(static_cast<uint8_t>((duration >> 8) & 0xFF));
-
-    // CRC Calculation and append it to the frame
-    uint8_t crc = calculateCRC(frame);
-    frame.push_back(crc);
-
-    return frame;
-}
-
-uint8_t FrameBuilder::calculateCRC(const std::vector<uint8_t>& frame) 
-{
-    uint16_t total = 0;
-
-    // Sum all bytes in the frame
+uint8_t FrameBuilder::FrameData::calculateCRC() const {
+    uint16_t sum = 0;
     for (const auto& byte : frame) {
-        total += byte;
+        sum += byte;
     }
+    return static_cast<uint8_t>((sum & 0xFF) + (sum >> 8));
+}
 
-    uint8_t lowByte = total & 0x00FF;
-    uint8_t highByte = (total & 0xFF00) >> 8;
+void FrameBuilder::validateValue(int32_t value, ST_MPC::RegisterType type) {
+    switch (type) {
+        case ST_MPC::RegisterType::UInt8:
+            if (value < 0 || value > 255) {
+                throw FrameError("Value out of range for UInt8 (0-255)");
+            }
+            break;
+            
+        case ST_MPC::RegisterType::Int16:
+            if (value < -32768 || value > 32767) {
+                throw FrameError("Value out of range for Int16 (-32768 to 32767)");
+            }
+            break;
+            
+        case ST_MPC::RegisterType::UInt16:
+            if (value < 0 || value > 65535) {
+                throw FrameError("Value out of range for UInt16 (0-65535)");
+            }
+            break;
+            
+        case ST_MPC::RegisterType::Int32:
+            // No range validation needed for Int32
+            break;
+            
+        case ST_MPC::RegisterType::UInt32:
+            if (value < 0) {
+                throw FrameError("Value must be non-negative for UInt32");
+            }
+            break;
+            
+        default:
+            throw FrameError("Unknown register type");
+    }
+}
 
-    uint8_t crc = lowByte + highByte;
+std::vector<uint8_t> FrameBuilder::valueToBytes(int32_t value, ST_MPC::RegisterType type) {
+    validateValue(value, type);
+    std::vector<uint8_t> bytes;
+    
+    switch (type) {
+        case ST_MPC::RegisterType::UInt8:
+            bytes = {static_cast<uint8_t>(value)};
+            break;
+            
+        case ST_MPC::RegisterType::Int16:
+        case ST_MPC::RegisterType::UInt16:
+            bytes = {
+                static_cast<uint8_t>(value & 0xFF),
+                static_cast<uint8_t>((value >> 8) & 0xFF)
+            };
+            break;
+            
+        case ST_MPC::RegisterType::Int32:
+        case ST_MPC::RegisterType::UInt32:
+            bytes = {
+                static_cast<uint8_t>(value & 0xFF),
+                static_cast<uint8_t>((value >> 8) & 0xFF),
+                static_cast<uint8_t>((value >> 16) & 0xFF),
+                static_cast<uint8_t>((value >> 24) & 0xFF)
+            };
+            break;
+            
+        default:
+            throw FrameError("Unknown register type");
+    }
+    
+    return bytes;
+}
 
-    return crc; // Append this to the frame
+std::vector<uint8_t> FrameBuilder::buildSetRegisterFrame(uint8_t motorId, 
+    ST_MPC::RegisterId regId, int32_t value, ST_MPC::RegisterType regType) 
+{
+    auto valueBytes = valueToBytes(value, regType);
+    
+    FrameData frame;
+    frame.setStartByte((motorId << 5) | static_cast<uint8_t>(ST_MPC::CommandId::SetRegister));
+    frame.setPayloadLength(static_cast<uint8_t>(1 + valueBytes.size()));
+    frame.addPayloadByte(static_cast<uint8_t>(regId));
+    frame.addPayloadBytes(valueBytes);
+    
+    return frame.complete();
+}
+
+std::vector<uint8_t> FrameBuilder::buildGetRegisterFrame(uint8_t motorId, ST_MPC::RegisterId regId) 
+{
+    FrameData frame;
+    frame.setStartByte((motorId << 5) | static_cast<uint8_t>(ST_MPC::CommandId::GetRegister));
+    frame.setPayloadLength(1);
+    frame.addPayloadByte(static_cast<uint8_t>(regId));
+    
+    return frame.complete();
+}
+
+std::vector<uint8_t> FrameBuilder::buildExecuteFrame(uint8_t motorId, ST_MPC::ExecuteId execId) 
+{
+    FrameData frame;
+    frame.setStartByte((motorId << 5) | static_cast<uint8_t>(ST_MPC::CommandId::Execute));
+    frame.setPayloadLength(1);
+    frame.addPayloadByte(static_cast<uint8_t>(execId));
+    
+    return frame.complete();
+}
+
+std::vector<uint8_t> FrameBuilder::buildExecuteRampFrame(uint8_t motorId, int32_t finalSpeed, uint16_t duration) 
+{
+    FrameData frame;
+    frame.setStartByte((motorId << 5) | static_cast<uint8_t>(ST_MPC::CommandId::ExecuteRamp));
+    frame.setPayloadLength(6);  // 4 bytes for speed + 2 bytes for duration
+    
+    // Add final speed bytes (little-endian)
+    frame.addPayloadByte(static_cast<uint8_t>(finalSpeed & 0xFF));
+    frame.addPayloadByte(static_cast<uint8_t>((finalSpeed >> 8) & 0xFF));
+    frame.addPayloadByte(static_cast<uint8_t>((finalSpeed >> 16) & 0xFF));
+    frame.addPayloadByte(static_cast<uint8_t>((finalSpeed >> 24) & 0xFF));
+    
+    // Add duration bytes (little-endian)
+    frame.addPayloadByte(static_cast<uint8_t>(duration & 0xFF));
+    frame.addPayloadByte(static_cast<uint8_t>((duration >> 8) & 0xFF));
+    
+    return frame.complete();
 }

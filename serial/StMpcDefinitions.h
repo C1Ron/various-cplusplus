@@ -1,9 +1,11 @@
 #ifndef ST_MPC_DEFINITIONS_H
 #define ST_MPC_DEFINITIONS_H
 
+#include <cstdint>
+
 namespace ST_MPC
 {
-    enum class FrameIndex
+    enum class FrameIndex : uint8_t
     {
         StartFrame = 0,
         PayloadLength = 1,
@@ -12,7 +14,7 @@ namespace ST_MPC
         Crc = 4
     };
 
-    enum class CommandId
+    enum class CommandId : uint8_t
     {
         SetRegister = 0x01,
         GetRegister = 0x02,
@@ -24,7 +26,7 @@ namespace ST_MPC
         SetCurrentRef = 0x0A
     };
 
-    enum class RegisterId
+    enum class RegisterId : uint8_t
     {
         TargetMotor = 0x00,    // U8
         Flags = 0x01,          // U32
@@ -50,16 +52,16 @@ namespace ST_MPC
         RampDuration = 0x5C    // U16 
     };
 
-    enum class RegisterType
+    enum class RegisterType : uint8_t
     {
-        uint8_t,
-        int16_t,
-        uint16_t,
-        int32_t,
-        uint32_t
+        UInt8,
+        Int16,
+        UInt16,
+        Int32,
+        UInt32
     };
 
-    enum class ExecuteId
+    enum class ExecuteId : uint8_t
     {
         StartMotor = 0x01,
         StopMotor = 0x02,
@@ -71,13 +73,13 @@ namespace ST_MPC
         EncoderAlign = 0x08
     };
 
-    enum class AckStatus
+    enum class AckStatus : uint8_t
     {
         Success = 0xF0,
         Failure = 0xFF
     };
 
-    enum class AckErrorId
+    enum class AckErrorId : uint8_t
     {
         FrameId = 0x01,
         SetReadOnly = 0x02,
@@ -87,7 +89,7 @@ namespace ST_MPC
         BadCrc = 0x0A
     };
 
-    enum class Status
+    enum class Status : uint8_t
     {
         Idle = 0x00,
         IdleAlignment = 0x01,
@@ -103,6 +105,6 @@ namespace ST_MPC
         FaultOver = 0x0B
     };
 
-};
+}; // namespace ST_MPC
 
 #endif // ST_MPC_DEFINITIONS_H

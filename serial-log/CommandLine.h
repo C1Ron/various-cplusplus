@@ -25,7 +25,6 @@ private:
     void handleLogRemove(const std::string& args);
     void handleExit();   // Handle exit
     void handleHelp();   // Handle help
-    ST_MPC::RegisterId getRegisterIdFromName(const std::string& regName) const;  // Declaration
     bool waitForInputOrShutdown(std::string& input);  // Declaration
 
     SerialConnection& m_serial;

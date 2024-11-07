@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -I$(BOOST_INCLUDE)
+CXXFLAGS = -std=c++20 -Wall -Wextra -pedantic -I$(BOOST_INCLUDE)
 
 # Boost library paths
 BOOST_LIBS = -lboost_system
@@ -13,7 +13,7 @@ BOOST_INCLUDE = ~/github/boost
 TARGET = main
 
 # Source files
-SRCS = main.cpp SerialConnection.cpp FrameBuilder.cpp FrameInterpreter.cpp CommandHandler.cpp SignalHandler.cpp
+SRCS = main.cpp SerialConnection.cpp FrameBuilder.cpp FrameInterpreter.cpp CommandHandler.cpp SignalHandler.cpp Logger.cpp
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)
