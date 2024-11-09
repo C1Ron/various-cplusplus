@@ -8,7 +8,6 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
-#include <optional>
 #include <vector>
 #include "Logger.h"
 
@@ -24,26 +23,25 @@ public:
     CommandResult processCommand(const std::string& command);
 
 private:
-    struct RegisterInfo {
+    struct Register {
         ST_MPC::RegisterId id;
         ST_MPC::RegisterType type;
-        std::string description;
     };
 
     // Command handlers
-    CommandResult handleSetRegister(const std::vector<std::string>& args);
-    CommandResult handleGetRegister(const std::vector<std::string>& args);
-    CommandResult handleExecute(const std::vector<std::string>& args);
-    CommandResult handleRamp(const std::vector<std::string>& args);
-    CommandResult handleLogStart(const std::vector<std::string>& args);
-    CommandResult handleLogStop(const std::vector<std::string>& args);
-    CommandResult handleLogAdd(const std::vector<std::string>& args);
-    CommandResult handleLogRemove(const std::vector<std::string>& args);
-    CommandResult handleLogStatus(const std::vector<std::string>& args);
+    CommandResult handleSetRegister(const std::string& args);
+    CommandResult handleGetRegister(const std::string& args);
+    CommandResult handleExecute(const std::string& args);
+    CommandResult handleRamp(const std::string& args);
+    CommandResult handleLogStart(const std::string& args);
+    CommandResult handleLogStop(const std::string& args);
+    CommandResult handleLogAdd(const std::string& args);
+    CommandResult handleLogRemove(const std::string& args);
+    CommandResult handleLogStatus(const std::string& args);
+    CommandResult handleError(const std::string& message, const std::exception& e) const;
 
     // Helper methods
-    std::vector<std::string> parseArgs(const std::string& command);
-    std::optional<RegisterInfo> getRegisterInfo(const std::string& regName);
+    const Register& getRegister(const std::string& regName);
     std::string sendAndProcessResponse(const std::vector<uint8_t>& frame);
 
     // Member variables
@@ -53,8 +51,8 @@ private:
     Logger* logger = nullptr;
 
     // Maps
-    std::unordered_map<std::string, std::function<CommandResult(const std::vector<std::string>&)>> commandMap;
-    std::unordered_map<std::string, RegisterInfo> registerMap;
+    std::unordered_map<std::string, std::function<CommandResult(const std::string&)>> commandMap;
+    std::unordered_map<std::string, Register> registerMap;
     std::unordered_map<std::string, ST_MPC::ExecuteId> executeMap;
 };
 

@@ -8,9 +8,11 @@
 #include <chrono>
 #include <mutex>
 
-class SerialConnection {
+class SerialConnection 
+{
 public:
-    class ReadError : public std::runtime_error {
+    class ReadError : public std::runtime_error 
+    {
     public:
         explicit ReadError(const std::string& msg) : std::runtime_error(msg) {}
     };

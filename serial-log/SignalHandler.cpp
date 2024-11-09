@@ -2,20 +2,21 @@
 #include <csignal>
 #include <iostream>
 
-std::atomic<bool> SignalHandler::shutdownFlag(false);
+std::atomic<bool> SignalHandler::exitFlag(false);
 
-void SignalHandler::registerHandler()
+void SignalHandler::setup()
 {
-    std::signal(SIGINT, SignalHandler::signalHandler);
+    std::signal(SIGINT, handleSignal);  // Ctrl+C
+    std::signal(SIGTERM, handleSignal); // Termination request
 }
 
-bool SignalHandler::shouldShutdown()
+bool SignalHandler::shouldExit()
 {
-    return shutdownFlag.load();
+    return exitFlag.load();
 }
 
-void SignalHandler::signalHandler(int signum)
+void SignalHandler::handleSignal(int signum)
 {
     std::cout << "\nInterrupt signal (" << signum << ") received." << std::endl;
-    shutdownFlag.store(true);
+    exitFlag.store(true);
 }

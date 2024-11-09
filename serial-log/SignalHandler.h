@@ -6,12 +6,12 @@
 class SignalHandler
 {
 public:
-    static void registerHandler();
-    static bool shouldShutdown();
+    static void setup();
+    static bool shouldExit();
 
 private:
-    static void signalHandler(int signum);
-    static std::atomic<bool> shutdownFlag;
+    static void handleSignal(int signum);
+    static std::atomic<bool> exitFlag;
 };
 
 #endif // SIGNAL_HANDLER_H
