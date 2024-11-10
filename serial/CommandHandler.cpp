@@ -332,12 +332,7 @@ std::string CommandHandler::sendAndProcessResponse(const std::vector<uint8_t>& f
 {
     connection.sendFrame(frame);
     auto response = connection.readFrame();
-    if (type == ST_MPC::RegisterType::CharPtr) {
-        frameInterpreter.printResponse(response);
-        return frameInterpreter.interpretResponse(response, type);
-    } else {
-        frameInterpreter.printResponse(response);
-        return frameInterpreter.interpretResponse(response, type);
-    }
+    frameInterpreter.printResponse(response);
+    return frameInterpreter.interpretResponse(response, type);
 
 }
