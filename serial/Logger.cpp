@@ -208,6 +208,13 @@ int32_t Logger::readRegisterValue(const RegisterInfo& reg)
                     (response[5] << 24)
                 );
                 break;
+
+            case ST_MPC::RegisterType::CharPtr:
+                if (payloadLength < 1) throw std::runtime_error("Invalid payload length for CharPtr");
+                std::string str(response.begin() + 2, response.end());
+                std::istringstream iss(str);
+                iss >> value;
+                break;
         }
         
         return value;
