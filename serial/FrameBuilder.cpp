@@ -1,12 +1,14 @@
 #include "FrameBuilder.h"
 #include <sstream>
 
-std::vector<uint8_t> FrameBuilder::FrameData::complete() {
+std::vector<uint8_t> FrameBuilder::FrameData::complete() 
+{
     frame.push_back(calculateCRC());
     return frame;
 }
 
-uint8_t FrameBuilder::FrameData::calculateCRC() const {
+uint8_t FrameBuilder::FrameData::calculateCRC() const 
+{
     uint16_t sum = 0;
     for (const auto& byte : frame) {
         sum += byte;
@@ -14,7 +16,8 @@ uint8_t FrameBuilder::FrameData::calculateCRC() const {
     return static_cast<uint8_t>((sum & 0xFF) + (sum >> 8));
 }
 
-void FrameBuilder::validateValue(int32_t value, ST_MPC::RegisterType type) {
+void FrameBuilder::validateValue(int32_t value, ST_MPC::RegisterType type) 
+{
     switch (type) {
         case ST_MPC::RegisterType::UInt8:
             if (value < 0 || value > 255) {
@@ -49,7 +52,8 @@ void FrameBuilder::validateValue(int32_t value, ST_MPC::RegisterType type) {
     }
 }
 
-std::vector<uint8_t> FrameBuilder::valueToBytes(int32_t value, ST_MPC::RegisterType type) {
+std::vector<uint8_t> FrameBuilder::valueToBytes(int32_t value, ST_MPC::RegisterType type) 
+{
     validateValue(value, type);
     std::vector<uint8_t> bytes;
     
@@ -83,8 +87,8 @@ std::vector<uint8_t> FrameBuilder::valueToBytes(int32_t value, ST_MPC::RegisterT
     return bytes;
 }
 
-std::vector<uint8_t> FrameBuilder::buildSetRegisterFrame(uint8_t motorId, 
-    ST_MPC::RegisterId regId, int32_t value, ST_MPC::RegisterType regType) 
+std::vector<uint8_t> FrameBuilder::buildSetRegisterFrame(uint8_t motorId, ST_MPC::RegisterId regId, 
+                                                        int32_t value, ST_MPC::RegisterType regType) 
 {
     auto valueBytes = valueToBytes(value, regType);
     

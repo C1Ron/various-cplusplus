@@ -7,7 +7,8 @@
 std::mutex Logger::readMutex;  // Define static mutex
 
 Logger::Logger(SerialConnection& serial, const LogConfig& config)
-    : serial(serial), config(config) {
+    : serial(serial), config(config) 
+{
     
     logFile.open(config.filename, std::ios::out | std::ios::trunc);
     if (!logFile.is_open()) {
@@ -15,28 +16,32 @@ Logger::Logger(SerialConnection& serial, const LogConfig& config)
     }
 }
 
-Logger::~Logger() {
+Logger::~Logger() 
+{
     stop();
     if (loggerThread.joinable()) {
         loggerThread.join();
     }
 }
 
-void Logger::start() {
+void Logger::start() 
+{
     if (!running.exchange(true)) {
         writeHeader();
         loggerThread = std::thread(&Logger::loggingThread, this);
     }
 }
 
-void Logger::stop() {
+void Logger::stop() 
+{
     running.store(false);
     if (loggerThread.joinable()) {
         loggerThread.join();
     }
 }
 
-bool Logger::addRegister(const std::string& regName, ST_MPC::RegisterId regId, ST_MPC::RegisterType type) {
+bool Logger::addRegister(const std::string& regName, ST_MPC::RegisterId regId, ST_MPC::RegisterType type) 
+{
     std::lock_guard<std::mutex> lock(registersMutex);
     
     // Check if register already exists
@@ -58,7 +63,8 @@ bool Logger::addRegister(const std::string& regName, ST_MPC::RegisterId regId, S
     return true;
 }
 
-bool Logger::removeRegister(const std::string& regName) {
+bool Logger::removeRegister(const std::string& regName) 
+{
     std::lock_guard<std::mutex> lock(registersMutex);
     
     auto it = std::find_if(registers.begin(), registers.end(),
@@ -78,7 +84,8 @@ bool Logger::removeRegister(const std::string& regName) {
     return true;
 }
 
-std::vector<std::string> Logger::getLoggedRegisters() const {
+std::vector<std::string> Logger::getLoggedRegisters() const 
+{
     std::lock_guard<std::mutex> lock(registersMutex);
     std::vector<std::string> names;
     names.reserve(registers.size());
@@ -88,7 +95,8 @@ std::vector<std::string> Logger::getLoggedRegisters() const {
     return names;
 }
 
-void Logger::writeHeader() {
+void Logger::writeHeader() 
+{
     std::lock_guard<std::mutex> lock(registersMutex);
     logFile.seekp(0);
     logFile.clear();
@@ -112,7 +120,8 @@ void Logger::writeHeader() {
 }
 
 void Logger::writeLogLine(const std::chrono::system_clock::time_point& timestamp,
-                         const std::map<std::string, int32_t>& values) {
+                         const std::map<std::string, int32_t>& values) 
+{
     if (config.useTimestamp) {
         auto ts = std::chrono::duration_cast<std::chrono::microseconds>(
             timestamp.time_since_epoch()).count();
@@ -133,7 +142,8 @@ void Logger::writeLogLine(const std::chrono::system_clock::time_point& timestamp
     logFile.flush();
 }
 
-int32_t Logger::readRegisterValue(const RegisterInfo& reg) {
+int32_t Logger::readRegisterValue(const RegisterInfo& reg) 
+{
     std::lock_guard<std::mutex> lock(readMutex);
 
     try {
@@ -207,7 +217,8 @@ int32_t Logger::readRegisterValue(const RegisterInfo& reg) {
     }
 }
 
-void Logger::loggingThread() {
+void Logger::loggingThread() 
+{
     while (running.load()) {
         try {
             auto timestamp = std::chrono::system_clock::now();

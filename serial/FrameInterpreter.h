@@ -8,7 +8,8 @@
 #include <unordered_map>
 #include "StMpcDefinitions.h"
 
-class FrameInterpreter {
+class FrameInterpreter 
+{
 public:
     struct ResponseInfo {
         bool isSuccess;
@@ -28,7 +29,8 @@ private:
     std::string formatValue(const std::vector<uint8_t>& payload);
     static std::string byteToHex(uint8_t byte);
 
-    const std::unordered_map<uint8_t, std::string> errorCodes = {
+    const std::unordered_map<uint8_t, std::string> errorCodes = 
+    {
         {0x01, "Invalid Frame ID"},
         {0x02, "Register is Read-Only"},
         {0x03, "Register is Write-Only"},

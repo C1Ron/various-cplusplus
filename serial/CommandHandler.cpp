@@ -6,7 +6,8 @@
 CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn) 
 {
     // Initialize command map
-    commandMap = {
+    commandMap = 
+    {
         {"set", [this](const std::string& args) { return handleSetRegister(args); }},
         {"get", [this](const std::string& args) { return handleGetRegister(args); }},
         {"exec", [this](const std::string& args) { return handleExecute(args); }},
@@ -14,7 +15,8 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
     };
 
     // Initialize register map with type information and descriptions
-    registerMap = {
+    registerMap = 
+    {
         {"SpeedRef", {ST_MPC::RegisterId::SpeedRef, ST_MPC::RegisterType::Int32}},
         {"SpeedKp", {ST_MPC::RegisterId::SpeedKp, ST_MPC::RegisterType::UInt16}},
         {"SpeedKi", {ST_MPC::RegisterId::SpeedKi, ST_MPC::RegisterType::UInt16}},
@@ -39,7 +41,8 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
     };
 
     // Initialize execute command map
-    executeMap = {
+    executeMap = 
+    {
         {"start", ST_MPC::ExecuteId::StartMotor},
         {"stop", ST_MPC::ExecuteId::StopMotor},
         {"align", ST_MPC::ExecuteId::EncoderAlign},

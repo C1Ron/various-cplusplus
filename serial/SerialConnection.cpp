@@ -2,11 +2,13 @@
 #include <iostream>
 
 SerialConnection::SerialConnection(const std::string& port, unsigned int baud_rate)
-    : serial(io, port) {
+    : serial(io, port) 
+{
     configurePort(baud_rate);
 }
 
-SerialConnection::~SerialConnection() {
+SerialConnection::~SerialConnection() 
+{
     try {
         if (serial.is_open()) {
             serial.close();
@@ -16,7 +18,8 @@ SerialConnection::~SerialConnection() {
     }
 }
 
-void SerialConnection::configurePort(unsigned int baud_rate) {
+void SerialConnection::configurePort(unsigned int baud_rate) 
+{
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
     serial.set_option(boost::asio::serial_port_base::character_size(8));
     serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
@@ -24,11 +27,13 @@ void SerialConnection::configurePort(unsigned int baud_rate) {
     serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
 }
 
-void SerialConnection::setTimeout(const std::chrono::milliseconds& timeout) {
+void SerialConnection::setTimeout(const std::chrono::milliseconds& timeout) 
+{
     readTimeout = timeout;
 }
 
-void SerialConnection::sendFrame(const std::vector<uint8_t>& frame) {
+void SerialConnection::sendFrame(const std::vector<uint8_t>& frame) 
+{
     std::lock_guard<std::mutex> lock(serialMutex);
     try {
         boost::asio::write(serial, boost::asio::buffer(frame));
@@ -37,7 +42,8 @@ void SerialConnection::sendFrame(const std::vector<uint8_t>& frame) {
     }
 }
 
-std::vector<uint8_t> SerialConnection::readFrame() {
+std::vector<uint8_t> SerialConnection::readFrame() 
+{
     std::lock_guard<std::mutex> lock(serialMutex);
     try {
         // Read header first (2 bytes)
@@ -71,12 +77,14 @@ std::vector<uint8_t> SerialConnection::readFrame() {
     }
 }
 
-std::vector<uint8_t> SerialConnection::readFrame(size_t size) {
+std::vector<uint8_t> SerialConnection::readFrame(size_t size) 
+{
     std::lock_guard<std::mutex> lock(serialMutex);
     return readWithTimeout(size);
 }
 
-std::vector<uint8_t> SerialConnection::readWithTimeout(size_t size) {
+std::vector<uint8_t> SerialConnection::readWithTimeout(size_t size) 
+{
     std::vector<uint8_t> buffer(size);
     
     // Simple synchronous read with timeout

@@ -11,9 +11,11 @@
 #include <vector>
 #include "Logger.h"
 
-class CommandHandler {
+class CommandHandler 
+{
 public:
-    struct CommandResult {
+    struct CommandResult 
+    {
         bool success;
         std::string message;
     };
@@ -23,7 +25,8 @@ public:
     CommandResult processCommand(const std::string& command);
 
 private:
-    struct Register {
+    struct Register 
+    {
         ST_MPC::RegisterId id;
         ST_MPC::RegisterType type;
     };

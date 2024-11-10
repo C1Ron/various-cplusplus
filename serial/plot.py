@@ -1,8 +1,5 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import time
-import datetime
 import matplotlib.animation as animation
 
 fig, (ax1,ax2) = plt.subplots(2,1, sharex = True)

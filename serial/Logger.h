@@ -12,9 +12,11 @@
 #include <thread>
 #include <vector>
 
-class Logger {
+class Logger 
+{
 public:
-    struct LogConfig {
+    struct LogConfig 
+    {
         std::string filename;
         std::chrono::milliseconds sampleInterval{100};
         size_t bufferSize{1024};
@@ -32,7 +34,8 @@ public:
     std::vector<std::string> getLoggedRegisters() const;
 
 private:
-    struct RegisterInfo {
+    struct RegisterInfo 
+    {
         ST_MPC::RegisterId id;
         ST_MPC::RegisterType type;
         std::string name;
@@ -56,7 +59,8 @@ private:
     
     static std::mutex readMutex;  // Static mutex for coordinating reads
     
-    int32_t extractValue(const std::vector<uint8_t>& response, ST_MPC::RegisterType type) {
+    int32_t extractValue(const std::vector<uint8_t>& response, ST_MPC::RegisterType type) 
+    {
             switch (type) {
                 case ST_MPC::RegisterType::UInt8:
                     return response[2];

@@ -3,14 +3,16 @@
 #include <iomanip>
 #include <iostream>
 
-void FrameInterpreter::printResponse(const std::vector<uint8_t>& response) {
+void FrameInterpreter::printResponse(const std::vector<uint8_t>& response) 
+{
     for (const auto& byte : response) {
         std::cout << byteToHex(byte) << " ";
     }
     std::cout << std::endl;
 }
 
-std::string FrameInterpreter::interpretResponse(const std::vector<uint8_t>& response) {
+std::string FrameInterpreter::interpretResponse(const std::vector<uint8_t>& response) 
+{
     if (response.size() < 3) {  // Minimum frame size: start + length + CRC
         return "Error: Invalid response size";
     }
@@ -27,7 +29,8 @@ std::string FrameInterpreter::interpretResponse(const std::vector<uint8_t>& resp
     }
 }
 
-FrameInterpreter::ResponseInfo FrameInterpreter::parseResponse(const std::vector<uint8_t>& response) {
+FrameInterpreter::ResponseInfo FrameInterpreter::parseResponse(const std::vector<uint8_t>& response) 
+{
     ResponseInfo info;
     info.isSuccess = (response[0] == 0xF0);
     info.payloadLength = response[1];
@@ -47,7 +50,8 @@ FrameInterpreter::ResponseInfo FrameInterpreter::parseResponse(const std::vector
     return info;
 }
 
-bool FrameInterpreter::validateCRC(const std::vector<uint8_t>& frame) {
+bool FrameInterpreter::validateCRC(const std::vector<uint8_t>& frame) 
+{
     if (frame.empty()) return false;
     
     uint16_t sum = 0;
@@ -59,7 +63,8 @@ bool FrameInterpreter::validateCRC(const std::vector<uint8_t>& frame) {
     return calculated_crc == frame.back();
 }
 
-std::string FrameInterpreter::interpretSuccessResponse(const ResponseInfo& info) {
+std::string FrameInterpreter::interpretSuccessResponse(const ResponseInfo& info) 
+{
     if (info.payloadLength == 0) {
         return "Success: Command executed";
     }
@@ -68,7 +73,8 @@ std::string FrameInterpreter::interpretSuccessResponse(const ResponseInfo& info)
     return "Success: " + valueStr;
 }
 
-std::string FrameInterpreter::interpretErrorResponse(const ResponseInfo& info) {
+std::string FrameInterpreter::interpretErrorResponse(const ResponseInfo& info) 
+{
     if (info.payload.empty()) {
         return "Error: Unknown error occurred";
     }
@@ -82,7 +88,8 @@ std::string FrameInterpreter::interpretErrorResponse(const ResponseInfo& info) {
     return "Error: Unknown error code 0x" + byteToHex(errorCode);
 }
 
-std::string FrameInterpreter::formatValue(const std::vector<uint8_t>& payload) {
+std::string FrameInterpreter::formatValue(const std::vector<uint8_t>& payload) 
+{
     if (payload.empty()) return "No data";
     
     std::stringstream ss;
@@ -120,7 +127,8 @@ std::string FrameInterpreter::formatValue(const std::vector<uint8_t>& payload) {
     return ss.str();
 }
 
-std::string FrameInterpreter::byteToHex(uint8_t byte) {
+std::string FrameInterpreter::byteToHex(uint8_t byte) 
+{
     std::stringstream ss;
     ss << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
     return ss.str();

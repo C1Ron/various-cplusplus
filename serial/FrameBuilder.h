@@ -8,11 +8,16 @@
 #include <stdexcept>
 #include <string>
 
-class FrameBuilder {
+class FrameBuilder 
+{
 public:
-    class FrameError : public std::runtime_error {
+    class FrameError : public std::runtime_error 
+    {
     public:
-        explicit FrameError(const std::string& msg) : std::runtime_error(msg) {}
+        explicit FrameError(const std::string& msg) : std::runtime_error(msg) 
+        {
+            
+        }
     };
 
     std::vector<uint8_t> buildSetRegisterFrame(uint8_t motorId, 
@@ -31,12 +36,23 @@ public:
                                              uint16_t duration);
 
 private:
-    class FrameData {
+    class FrameData 
+    {
     public:
-        void setStartByte(uint8_t byte) { frame.push_back(byte); }
-        void setPayloadLength(uint8_t length) { frame.push_back(length); }
-        void addPayloadByte(uint8_t byte) { frame.push_back(byte); }
-        void addPayloadBytes(const std::vector<uint8_t>& bytes) {
+        void setStartByte(uint8_t byte) 
+        { 
+            frame.push_back(byte); 
+        }
+        void setPayloadLength(uint8_t length) 
+        { 
+            frame.push_back(length); 
+        }
+        void addPayloadByte(uint8_t byte) 
+        { 
+            frame.push_back(byte); 
+        }
+        void addPayloadBytes(const std::vector<uint8_t>& bytes) 
+        {
             frame.insert(frame.end(), bytes.begin(), bytes.end());
         }
         std::vector<uint8_t> complete();

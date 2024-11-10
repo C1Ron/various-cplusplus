@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
         // Configure logger
         Logger::LogConfig logConfig{
             .filename = "log.csv",
-            .sampleInterval = std::chrono::milliseconds(100),
+            .sampleInterval = std::chrono::milliseconds(1),
             .bufferSize = 1024,
             .useTimestamp = true
         };
