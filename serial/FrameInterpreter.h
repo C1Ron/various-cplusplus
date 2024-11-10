@@ -11,32 +11,35 @@
 class FrameInterpreter 
 {
 public:
-    struct ResponseInfo {
+    struct ResponseInfo 
+    {
         bool isSuccess;
         uint8_t payloadLength;
         std::vector<uint8_t> payload;
         bool validCRC;
     };
-
     std::string interpretResponse(const std::vector<uint8_t>& response);
+    std::string interpretResponse(const std::vector<uint8_t>& response, ST_MPC::RegisterType type);
     void printResponse(const std::vector<uint8_t>& response);
 
 private:
     ResponseInfo parseResponse(const std::vector<uint8_t>& response);
     std::string interpretSuccessResponse(const ResponseInfo& info);
+    std::string interpretSuccessResponse(const ResponseInfo& info, ST_MPC::RegisterType type);
     std::string interpretErrorResponse(const ResponseInfo& info);
     bool validateCRC(const std::vector<uint8_t>& frame);
     std::string formatValue(const std::vector<uint8_t>& payload);
+    std::string formatValue(const std::vector<uint8_t>& payload, ST_MPC::RegisterType type);
     static std::string byteToHex(uint8_t byte);
 
-    const std::unordered_map<uint8_t, std::string> errorCodes = 
+    const std::unordered_map<ST_MPC::AckErrorId, std::string> errorCodes = 
     {
-        {0x01, "Invalid Frame ID"},
-        {0x02, "Register is Read-Only"},
-        {0x03, "Register is Write-Only"},
-        {0x04, "No Target Motor Selected"},
-        {0x05, "Value Out of Range"},
-        {0x0A, "CRC Error"}
+        {ST_MPC::AckErrorId::FrameId, "Invalid Frame ID"},
+        {ST_MPC::AckErrorId::SetReadOnly, "Register is Read-Only"},
+        {ST_MPC::AckErrorId::GetWriteOnly, "Register is Write-Only"},
+        {ST_MPC::AckErrorId::NoTargetMotor, "No Target Motor Selected"},
+        {ST_MPC::AckErrorId::OutOfRange, "Value Out of Range"},
+        {ST_MPC::AckErrorId::BadCrc, "CRC Error"}
     };
 };
 

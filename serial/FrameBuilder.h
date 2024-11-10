@@ -16,7 +16,7 @@ public:
     public:
         explicit FrameError(const std::string& msg) : std::runtime_error(msg) 
         {
-            
+            // intentionally empty
         }
     };
 

@@ -29,10 +29,28 @@ std::string FrameInterpreter::interpretResponse(const std::vector<uint8_t>& resp
     }
 }
 
+std::string FrameInterpreter::interpretResponse(const std::vector<uint8_t>& response, ST_MPC::RegisterType type) 
+{
+    if (response.size() < 3) {  // Minimum frame size: start + length + CRC
+        return "Error: Invalid response size";
+    }
+
+    auto info = parseResponse(response);
+    if (!info.validCRC) {
+        return "Error: Invalid CRC";
+    }
+
+    if (info.isSuccess) {
+        return interpretSuccessResponse(info, type);
+    } else {
+        return interpretErrorResponse(info);
+    }
+}
+
 FrameInterpreter::ResponseInfo FrameInterpreter::parseResponse(const std::vector<uint8_t>& response) 
 {
     ResponseInfo info;
-    info.isSuccess = (response[0] == 0xF0);
+    info.isSuccess = (static_cast<ST_MPC::AckStatus>(response[0]) == ST_MPC::AckStatus::Success);
     info.payloadLength = response[1];
     
     // Validate frame size
@@ -63,13 +81,23 @@ bool FrameInterpreter::validateCRC(const std::vector<uint8_t>& frame)
     return calculated_crc == frame.back();
 }
 
-std::string FrameInterpreter::interpretSuccessResponse(const ResponseInfo& info) 
+std::string FrameInterpreter::interpretSuccessResponse(const ResponseInfo& info)
 {
     if (info.payloadLength == 0) {
         return "Success: Command executed";
     }
     
     std::string valueStr = formatValue(info.payload);
+    return "Success: " + valueStr;
+}
+
+std::string FrameInterpreter::interpretSuccessResponse(const ResponseInfo& info, ST_MPC::RegisterType type)
+{
+    if (info.payloadLength == 0) {
+        return "Success: Command executed";
+    }
+    
+    std::string valueStr = formatValue(info.payload, type);
     return "Success: " + valueStr;
 }
 
@@ -80,7 +108,7 @@ std::string FrameInterpreter::interpretErrorResponse(const ResponseInfo& info)
     }
     
     uint8_t errorCode = info.payload[0];
-    auto it = errorCodes.find(errorCode);
+    auto it = errorCodes.find(static_cast<ST_MPC::AckErrorId>(errorCode));
     if (it != errorCodes.end()) {
         return "Error: " + it->second;
     }
@@ -113,6 +141,67 @@ std::string FrameInterpreter::formatValue(const std::vector<uint8_t>& payload)
                                                 (payload[2] << 16) | (payload[3] << 24));
             ss << value;
             ss << " (0x" << std::hex << std::setw(8) << std::setfill('0') << value << ")";
+            break;
+        }
+        default: {
+            ss << "Raw data: ";
+            for (const auto& byte : payload) {
+                ss << byteToHex(byte) << " ";
+            }
+            break;
+        }
+    }
+    
+    return ss.str();
+}
+
+std::string FrameInterpreter::formatValue(const std::vector<uint8_t>& payload, ST_MPC::RegisterType type) 
+{
+    if (payload.empty()) return "No data";
+    
+    std::stringstream ss;
+    ss << "Value: ";
+    
+    switch (type) {
+        case ST_MPC::RegisterType::UInt8: {
+            uint8_t value = payload[0];
+            ss << static_cast<int>(value);
+            ss << " (0x" << byteToHex(value) << ")";
+            break;
+        }
+        case ST_MPC::RegisterType::UInt16: {
+            if (payload.size() < 2) return "Error: Invalid payload size for UInt16";
+            uint16_t value = static_cast<uint16_t>(payload[0] | (payload[1] << 8));
+            ss << value;
+            ss << " (0x" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(value) << ")";
+            break;
+        }
+        case ST_MPC::RegisterType::Int16: {
+            if (payload.size() < 2) return "Error: Invalid payload size for Int16";
+            int16_t value = static_cast<int16_t>(payload[0] | (payload[1] << 8));
+            ss << value;
+            ss << " (0x" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(value) << ")";
+            break;
+        }
+        case ST_MPC::RegisterType::UInt32: {
+            if (payload.size() < 4) return "Error: Invalid payload size for UInt32";
+            uint32_t value = static_cast<uint32_t>(payload[0] | (payload[1] << 8) | 
+                                                (payload[2] << 16) | (payload[3] << 24));
+            ss << value;
+            ss << " (0x" << std::hex << std::setw(8) << std::setfill('0') << value << ")";
+            break;
+        }
+        case ST_MPC::RegisterType::Int32: {
+            if (payload.size() < 4) return "Error: Invalid payload size for INT32";
+            int32_t value = static_cast<int32_t>(payload[0] | (payload[1] << 8) | 
+                                                (payload[2] << 16) | (payload[3] << 24));
+            ss << value;
+            ss << " (0x" << std::hex << std::setw(8) << std::setfill('0') << value << ")";
+            break;
+        }
+        case ST_MPC::RegisterType::CharPtr: {
+            std::string str(payload.begin(), payload.end());
+            ss << str;
             break;
         }
         default: {

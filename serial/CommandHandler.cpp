@@ -168,7 +168,7 @@ CommandHandler::CommandResult CommandHandler::handleGetRegister(const std::strin
     try {
         auto reg = getRegister(regName);
         auto frame = frameBuilder.buildGetRegisterFrame(1, reg.id);
-        auto response = sendAndProcessResponse(frame);
+        auto response = sendAndProcessResponse(frame, reg.type);
         return {true, "Register '" + regName + "' response: " + response};
     }
     catch (const std::exception& e) {
@@ -199,20 +199,21 @@ CommandHandler::CommandResult CommandHandler::handleRamp(const std::string& args
 {
     std::istringstream iss(args);
     int32_t finalSpeed;
-    uint16_t duration;
+    int32_t duration;
 
     if (!(iss >> finalSpeed >> duration)) {
         return {false, "Usage: ramp <final_speed> <duration>"};
     }
 
-    if (duration == 0) {
+    if (duration <= 0) {
         return {false, "Duration must be greater than 0"};
     }
 
     try {
-        auto frame = frameBuilder.buildExecuteRampFrame(1, finalSpeed, duration);
+        auto frame = frameBuilder.buildExecuteRampFrame(1, finalSpeed, static_cast<uint16_t>(duration));
         auto response = sendAndProcessResponse(frame);
-        return {true, "Started ramp to speed " + std::to_string(finalSpeed) + " over " + std::to_string(duration) + "ms\n" + response};
+        return {true, "Started ramp: " + std::to_string(finalSpeed) + " rpm over " 
+                    + std::to_string(duration) + " ms\n" + response};
     } catch (const std::exception& e) {
         return handleError("handleRamp failed", e);
     }
@@ -325,4 +326,18 @@ std::string CommandHandler::sendAndProcessResponse(const std::vector<uint8_t>& f
     auto response = connection.readFrame();
     frameInterpreter.printResponse(response);
     return frameInterpreter.interpretResponse(response);
+}
+
+std::string CommandHandler::sendAndProcessResponse(const std::vector<uint8_t>& frame, ST_MPC::RegisterType type)
+{
+    connection.sendFrame(frame);
+    auto response = connection.readFrame();
+    if (type == ST_MPC::RegisterType::CharPtr) {
+        frameInterpreter.printResponse(response);
+        return frameInterpreter.interpretResponse(response, type);
+    } else {
+        frameInterpreter.printResponse(response);
+        return frameInterpreter.interpretResponse(response, type);
+    }
+
 }

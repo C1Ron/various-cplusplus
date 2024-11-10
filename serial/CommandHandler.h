@@ -46,6 +46,7 @@ private:
     // Helper methods
     const Register& getRegister(const std::string& regName);
     std::string sendAndProcessResponse(const std::vector<uint8_t>& frame);
+    std::string sendAndProcessResponse(const std::vector<uint8_t>& frame, ST_MPC::RegisterType type);
 
     // Member variables
     SerialConnection& connection;
