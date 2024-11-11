@@ -16,6 +16,10 @@ void CommandHandler::initializeMaps()
     m_commandMap["get"] = [this](const std::string& args) { handleGetRegister(args); };
     m_commandMap["exec"] = [this](const std::string& args) { handleExecute(args); };
     m_commandMap["ramp"] = [this](const std::string& args) { handleExecuteRamp(args); };
+    m_commandMap["log-add"] = [this](const std::string& args) { handleLogAdd(args); };
+    m_commandMap["log-remove"] = [this](const std::string& args) { handleLogRemove(args); };
+    m_commandMap["log-start"] = [this](const std::string& args) { handleLogStart(args); };
+    m_commandMap["log-stop"] = [this](const std::string& args) { handleLogStop(args); };
 
     registerIdMap = {
         {"Flags", ST_MPC::RegisterId::Flags},
@@ -175,6 +179,61 @@ void CommandHandler::handleExecuteRamp(const std::string& args)
     sendAndProcessResponse(frame);
 }
 
+void CommandHandler::handleLogStart(const std::string& args) 
+{
+    m_logger->startLogging();
+    std::cout << "Logging started." << std::endl;
+}
+
+void CommandHandler::handleLogStop(const std::string& args) 
+{
+    m_logger->stopLogging();
+    std::cout << "Logging stopped." << std::endl;
+}
+
+void CommandHandler::handleLogAdd(const std::string& args) 
+{
+    std::istringstream iss(args);
+    std::string regName;
+    if (!(iss >> regName)) {
+        std::cerr << "Usage: log-add <register_name>" << std::endl;
+        return;
+    }
+
+    auto it = getRegisterIdMap().find(regName);  // Access registerIdMap directly
+    if (it != getRegisterIdMap().end()) {
+        ST_MPC::RegisterId regId = it->second;
+        if (m_logger->addRegister(regId)) {
+            std::cout << "Register " << regName << " added to logging." << std::endl;
+        } else {
+            std::cerr << "Failed to add register: " << regName << std::endl;
+        }
+    } else {
+        std::cerr << "Unknown register name: " << regName << std::endl;
+    }
+}
+
+void CommandHandler::handleLogRemove(const std::string& args) 
+{
+    std::istringstream iss(args);
+    std::string regName;
+    if (!(iss >> regName)) {
+        std::cerr << "Usage: log-remove <register_name>" << std::endl;
+        return;
+    }
+
+    auto it = getRegisterIdMap().find(regName);  // Access registerIdMap directly
+    if (it != getRegisterIdMap().end()) {
+        ST_MPC::RegisterId regId = it->second;
+        if (m_logger->removeRegister(regId)) {
+            std::cout << "Register " << regName << " removed from logging." << std::endl;
+        } else {
+            std::cerr << "Failed to remove register: " << regName << std::endl;
+        }
+    } else {
+        std::cerr << "Unknown register name: " << regName << std::endl;
+    }
+}
 void CommandHandler::sendAndProcessResponse(const std::vector<uint8_t>& frame)
 {
     connection.sendFrame(frame);

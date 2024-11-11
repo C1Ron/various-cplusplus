@@ -2,18 +2,20 @@
 #define FAST_LOGGER_H
 
 #include "SerialConnection.h"
-#include "CommandHandler.h"
+#include "StMpcDefinitions.h"
 #include <chrono>
 #include <vector>
 #include <string>
 #include <thread>
 #include <atomic>
 #include <fstream>
+#include <unordered_map>
 
-class FastLogger
-{
+class FastLogger {
 public:
-    FastLogger(SerialConnection& serial, CommandHandler& handler, const std::string& logFile);
+    FastLogger(SerialConnection& serial, 
+              const std::unordered_map<ST_MPC::RegisterId, ST_MPC::RegisterType>& regTypeMap,
+              const std::string& logFile);
     ~FastLogger();
 
     bool addRegister(ST_MPC::RegisterId regId);
@@ -27,13 +29,12 @@ private:
     uint8_t calculateCRC(const std::vector<uint8_t>& frame);
 
     SerialConnection& m_serial;
-    CommandHandler& m_handler;  
+    const std::unordered_map<ST_MPC::RegisterId, ST_MPC::RegisterType>& m_regTypeMap;
     std::ofstream m_logFile;
     std::vector<ST_MPC::RegisterId> m_registers;
     std::atomic<bool> m_isRunning;
     std::thread m_loggerThread;
-
-    bool m_headerWritten; // Track if header has been written
+    bool m_headerWritten;
 };
 
 #endif // FAST_LOGGER_H

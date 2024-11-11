@@ -2,8 +2,10 @@
 #include <iostream>
 #include <iomanip>
 
-FastLogger::FastLogger(SerialConnection& serial, CommandHandler& handler, const std::string& logFile)
-    : m_serial(serial), m_handler(handler), m_isRunning(false)
+FastLogger::FastLogger(SerialConnection& serial,
+     const std::unordered_map<ST_MPC::RegisterId, ST_MPC::RegisterType>& regTypeMap,
+     const std::string& logFile)
+    : m_serial(serial),  m_isRunning(false), m_regTypeMap(regTypeMap)
 {
     // Open the file in trunc mode to clear existing content
     m_logFile.open(logFile, std::ios::out | std::ios::trunc);
@@ -93,8 +95,8 @@ void FastLogger::loggingThread()
                     continue;
                 }
 
-                auto regTypeIt = m_handler.getRegisterTypeMap().find(regId);
-                if (regTypeIt == m_handler.getRegisterTypeMap().end()) {
+                auto regTypeIt = m_regTypeMap.find(regId);
+                if (regTypeIt == m_regTypeMap.end()) {
                     std::cerr << "Unknown register type for register ID: " << static_cast<int>(regId) << std::endl;
                     m_logFile << ", ";  // Empty field for missing register
                     continue;

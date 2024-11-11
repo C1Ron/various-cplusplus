@@ -55,7 +55,8 @@ clean:
 # Dependencies
 $(OBJDIR)/main.o: main.cpp SerialConnection.h CommandLine.h SignalHandler.h StMpcDefinitions.h
 $(OBJDIR)/SerialConnection.o: SerialConnection.cpp SerialConnection.h StMpcDefinitions.h
-$(OBJDIR)/CommandHandler.o: CommandHandler.cpp CommandHandler.h SerialConnection.h FrameBuilder.h FrameInterpreter.h StMpcDefinitions.h
+$(OBJDIR)/CommandHandler.o: CommandHandler.cpp CommandHandler.h SerialConnection.h FrameBuilder.h \
+	FrameInterpreter.h FastLogger.h StMpcDefinitions.h
 $(OBJDIR)/CommandLine.o: CommandLine.cpp CommandLine.h CommandHandler.h StMpcDefinitions.h
 $(OBJDIR)/FastLogger.o: FastLogger.cpp FastLogger.h SerialConnection.h StMpcDefinitions.h
 $(OBJDIR)/FrameBuilder.o: FrameBuilder.cpp FrameBuilder.h StMpcDefinitions.h

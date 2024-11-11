@@ -3,33 +3,26 @@
 
 #include "SerialConnection.h"
 #include "CommandHandler.h"
-#include "FastLogger.h"
-#include "TurboLogger.h"
 #include <string>
 #include <unordered_map>
 #include <functional>
 #include <atomic>
 
-class CommandLine {
+class CommandLine 
+{
 public:
-    CommandLine(SerialConnection& serial, FastLogger& logger);
+    CommandLine(SerialConnection& serial, CommandHandler& handler);
     ~CommandLine();
     void run();
 
 private:
-    void registerCommands();
     void processCommand(const std::string& command);
-    void handleLogStart();
-    void handleLogStop();
-    void handleLogAdd(const std::string& args);
-    void handleLogRemove(const std::string& args);
     void handleExit();   // Handle exit
     void handleHelp();   // Handle help
     bool waitForInputOrShutdown(std::string& input);  // Declaration
 
     SerialConnection& m_serial;
-    CommandHandler m_handler;  
-    FastLogger& m_logger; 
+    CommandHandler& m_handler;  
     std::atomic<bool> m_isRunning;
     std::unordered_map<std::string, std::function<void(const std::string&)>> m_commands;
 };

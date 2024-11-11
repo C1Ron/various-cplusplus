@@ -16,7 +16,8 @@ public:
     std::vector<uint8_t> processFrame(const std::vector<uint8_t>& frame);
 
 private:
-    struct Register {
+    struct Register 
+    {
         std::variant<int16_t, int32_t> value;
         bool is32bit;
     };
