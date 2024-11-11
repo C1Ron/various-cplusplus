@@ -87,7 +87,7 @@ std::vector<uint8_t> FrameBuilder::valueToBytes(int32_t value, ST_MPC::RegisterT
     return bytes;
 }
 
-std::vector<uint8_t> FrameBuilder::buildSetRegisterFrame(uint8_t motorId, ST_MPC::RegisterId regId, 
+std::vector<uint8_t> FrameBuilder::buildSetFrame(uint8_t motorId, ST_MPC::RegisterId regId, 
                                                         int32_t value, ST_MPC::RegisterType regType) 
 {
     auto valueBytes = valueToBytes(value, regType);
@@ -101,7 +101,7 @@ std::vector<uint8_t> FrameBuilder::buildSetRegisterFrame(uint8_t motorId, ST_MPC
     return frame.complete();
 }
 
-std::vector<uint8_t> FrameBuilder::buildGetRegisterFrame(uint8_t motorId, ST_MPC::RegisterId regId) 
+std::vector<uint8_t> FrameBuilder::buildGetFrame(uint8_t motorId, ST_MPC::RegisterId regId) 
 {
     FrameData frame;
     frame.setStartByte((motorId << 5) | static_cast<uint8_t>(ST_MPC::CommandId::GetRegister));
@@ -121,7 +121,7 @@ std::vector<uint8_t> FrameBuilder::buildExecuteFrame(uint8_t motorId, ST_MPC::Ex
     return frame.complete();
 }
 
-std::vector<uint8_t> FrameBuilder::buildExecuteRampFrame(uint8_t motorId, int32_t finalSpeed, uint16_t duration) 
+std::vector<uint8_t> FrameBuilder::buildRampFrame(uint8_t motorId, int32_t finalSpeed, uint16_t duration) 
 {
     FrameData frame;
     frame.setStartByte((motorId << 5) | static_cast<uint8_t>(ST_MPC::CommandId::ExecuteRamp));
@@ -136,6 +136,23 @@ std::vector<uint8_t> FrameBuilder::buildExecuteRampFrame(uint8_t motorId, int32_
     // Add duration bytes (little-endian)
     frame.addPayloadByte(static_cast<uint8_t>(duration & 0xFF));
     frame.addPayloadByte(static_cast<uint8_t>((duration >> 8) & 0xFF));
+    
+    return frame.complete();
+}
+
+std::vector<uint8_t> FrameBuilder::buildCurrentFrame(uint8_t motorId, int16_t IqRef, int16_t IdRef)
+{
+    FrameData frame;
+    frame.setStartByte((motorId << 5) | static_cast<uint8_t>(ST_MPC::CommandId::SetCurrentRef));
+    frame.setPayloadLength(4);  // 2 bytes for IqRef + 2 bytes for IdRef
+    
+    // Add IqRef bytes (little-endian)
+    frame.addPayloadByte(static_cast<uint8_t>(IqRef & 0xFF));
+    frame.addPayloadByte(static_cast<uint8_t>((IqRef >> 8) & 0xFF));
+    
+    // Add IdRef bytes (little-endian)
+    frame.addPayloadByte(static_cast<uint8_t>(IdRef & 0xFF));
+    frame.addPayloadByte(static_cast<uint8_t>((IdRef >> 8) & 0xFF));
     
     return frame.complete();
 }

@@ -20,20 +20,24 @@ public:
         }
     };
 
-    std::vector<uint8_t> buildSetRegisterFrame(uint8_t motorId, 
+    std::vector<uint8_t> buildSetFrame(uint8_t motorId, 
                                              ST_MPC::RegisterId regId,
                                              int32_t value, 
                                              ST_MPC::RegisterType regType);
                                              
-    std::vector<uint8_t> buildGetRegisterFrame(uint8_t motorId,
+    std::vector<uint8_t> buildGetFrame(uint8_t motorId,
                                              ST_MPC::RegisterId regId);
                                              
     std::vector<uint8_t> buildExecuteFrame(uint8_t motorId,
                                          ST_MPC::ExecuteId execId);
                                          
-    std::vector<uint8_t> buildExecuteRampFrame(uint8_t motorId,
+    std::vector<uint8_t> buildRampFrame(uint8_t motorId,
                                              int32_t finalSpeed,
                                              uint16_t duration);
+    
+    std::vector<uint8_t> buildCurrentFrame(uint8_t motorId,
+                                              int16_t IqRef,
+                                              int16_t IdRef);
 
 private:
     class FrameData 

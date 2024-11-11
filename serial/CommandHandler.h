@@ -23,6 +23,9 @@ public:
     CommandHandler(SerialConnection& conn);
     CommandHandler(SerialConnection& conn, Logger& logger);
     CommandResult processCommand(const std::string& command);
+    const std::string printAllRegisters();
+    const std::string printAllExecutes();
+    const std::string printAllStatuses();
 
 private:
     struct Register 
@@ -36,6 +39,7 @@ private:
     CommandResult handleGetRegister(const std::string& args);
     CommandResult handleExecute(const std::string& args);
     CommandResult handleRamp(const std::string& args);
+    CommandResult handleCurrentRef(const std::string& args);
     CommandResult handleLogStart(const std::string& args);
     CommandResult handleLogStop(const std::string& args);
     CommandResult handleLogAdd(const std::string& args);
@@ -58,6 +62,7 @@ private:
     std::unordered_map<std::string, std::function<CommandResult(const std::string&)>> commandMap;
     std::unordered_map<std::string, Register> registerMap;
     std::unordered_map<std::string, ST_MPC::ExecuteId> executeMap;
+    std::unordered_map<std::string, ST_MPC::Status> statusMap;
 };
 
 #endif // COMMAND_HANDLER_H

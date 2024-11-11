@@ -4,21 +4,43 @@
 #include "Logger.h"
 #include <iostream>
 #include <string>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 void printHelp() 
 {
-    std::cout << "Available commands:\n"
-              << "  set <register_name> <value>    - Set register value\n"
-              << "  get <register_name>            - Get register value\n"
-              << "  exec <command_name>            - Execute command\n"
-              << "  ramp <speed> <duration>        - Execute speed ramp\n"
-              << "  log-start                      - Start logging\n"
-              << "  log-stop                       - Stop logging\n"
-              << "  log-add <register_name>        - Add register to logging\n"
-              << "  log-remove <register_name>     - Remove register from logging\n"
-              << "  log-status                     - Show logging status\n"
-              << "  help                           - Show this help\n"
-              << "  exit                           - Exit program\n";
+    std::cout << "MPC commands:\n"
+              << "\tset <register> <value>         - Set register value\n"
+              << "\tget <register>                 - Get register value\n"
+              << "\texec <command>                 - Execute command\n"
+              << "\tramp <speed> <duration>        - Execute speed ramp\n"
+              << "\tcurrent <Iq> <Id>              - Set current references\n"
+              << "Logging commands:\n"
+              << "\tlog-start                      - Start logging\n"
+              << "\tlog-stop                       - Stop logging\n"
+              << "\tlog-add <register>             - Add register to logging\n"
+              << "\tlog-remove <register>          - Remove register from logging\n"
+              << "\tlog-status                     - Show logging status\n"
+              << "Other commands:\n"
+              << "\thelp                           - Show this help\n"
+              << "\thelp-reg                       - Show all available registers and associated types\n"
+              << "\thelp-exec                      - Show all available execute commands\n"
+              << "\thelp-status                    - Show all available status values\n"
+              << "\texit                           - Exit program\n";
+}
+
+void printRegisters(CommandHandler &handler)
+{
+    std::cout << handler.printAllRegisters() << std::endl;
+}
+void printExecutes(CommandHandler &handler)
+{
+    std::cout << handler.printAllExecutes() << std::endl;
+}
+
+void printStatuses(CommandHandler &handler)
+{
+    std::cout << handler.printAllStatuses() << std::endl;
 }
 
 int main(int argc, char* argv[]) 
@@ -48,30 +70,44 @@ int main(int argc, char* argv[])
         std::cout << "Motor Control Interface\n"
                   << "Type 'help' for available commands\n";
 
-        std::string userInput;
         while (!SignalHandler::shouldExit()) {
-            std::cout << "> ";
-            if (!std::getline(std::cin, userInput)) {
-                break;  // Handle EOF
-            }
-
-            if (userInput == "exit") {
+            char* line = readline("> ");
+            if (line == nullptr) {  // Handle Ctrl+D
                 break;
             }
-
-            if (userInput == "help") {
-                printHelp();
-                continue;
-            }
-
+            
+            std::string userInput(line);
             if (!userInput.empty()) {
-                auto result = handler.processCommand(userInput);
-                if (result.success) {
-                    std::cout << result.message << std::endl;
-                } else {
-                    std::cerr << "Error: " << result.message << std::endl;
+                add_history(line);
+                
+                // Handle help commands first
+                if (userInput == "help") {
+                    printHelp();
+                }
+                else if (userInput == "help-reg") {
+                    printRegisters(handler);
+                }
+                else if (userInput == "help-exec") {
+                    printExecutes(handler);
+                }
+                else if (userInput == "help-status") {
+                    printStatuses(handler);
+                }
+                else if (userInput == "exit") {
+                    free(line);
+                    break;
+                }
+                else {
+                    // Process other commands
+                    auto result = handler.processCommand(userInput);
+                    if (result.success) {
+                        std::cout << result.message << std::endl;
+                    } else {
+                        std::cerr << "Error: " << result.message << std::endl;
+                    }
                 }
             }
+            free(line);
         }
 
         // Cleanup

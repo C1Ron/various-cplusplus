@@ -166,7 +166,7 @@ std::string FrameInterpreter::formatValue(const std::vector<uint8_t>& payload, S
         case ST_MPC::RegisterType::UInt8: {
             uint8_t value = payload[0];
             ss << static_cast<int>(value);
-            ss << " (0x" << byteToHex(value) << ")";
+            ss << " (" << byteToHex(value) << ")";
             break;
         }
         case ST_MPC::RegisterType::UInt16: {

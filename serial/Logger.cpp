@@ -148,7 +148,7 @@ int32_t Logger::readRegisterValue(const RegisterInfo& reg)
 
     try {
         FrameBuilder frameBuilder;
-        auto frame = frameBuilder.buildGetRegisterFrame(1, reg.id);
+        auto frame = frameBuilder.buildGetFrame(1, reg.id);
         serial.sendFrame(frame);
         auto response = serial.readFrame();
 
@@ -247,7 +247,7 @@ void Logger::loggingThread()
             for (const auto& reg : regs) {
                 try {
                     FrameBuilder frameBuilder;
-                    auto frame = frameBuilder.buildGetRegisterFrame(1, reg.id);
+                    auto frame = frameBuilder.buildGetFrame(1, reg.id);
                     serial.sendFrame(frame);
                     auto response = serial.readFrame();
 

@@ -8,10 +8,11 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
     // Initialize command map
     commandMap = 
     {
-        {"set", [this](const std::string& args) { return handleSetRegister(args); }},
-        {"get", [this](const std::string& args) { return handleGetRegister(args); }},
-        {"exec", [this](const std::string& args) { return handleExecute(args); }},
-        {"ramp", [this](const std::string& args) { return handleRamp(args); }}
+        {"set",     [this](const std::string& args) { return handleSetRegister(args); }},
+        {"get",     [this](const std::string& args) { return handleGetRegister(args); }},
+        {"exec",    [this](const std::string& args) { return handleExecute(args); }},
+        {"ramp",    [this](const std::string& args) { return handleRamp(args); }},
+        {"current", [this](const std::string& args) { return handleCurrentRef(args); }} 
     };
 
     // Initialize register map with type information and descriptions
@@ -103,6 +104,21 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
         {"ping", ST_MPC::ExecuteId::Ping},
         {"faultack", ST_MPC::ExecuteId::FaultAck}
     };
+
+    statusMap = 
+    {
+        {"idle", ST_MPC::Status::Idle},
+        {"idle-alignment", ST_MPC::Status::IdleAlignment},
+        {"alignment", ST_MPC::Status::Alignment},
+        {"idle-start", ST_MPC::Status::IdleStart},
+        {"start", ST_MPC::Status::Start},
+        {"start-run", ST_MPC::Status::StartRun},
+        {"run", ST_MPC::Status::Run},
+        {"stop", ST_MPC::Status::Stop},
+        {"stop-idle", ST_MPC::Status::StopIdle},
+        {"fault-now", ST_MPC::Status::FaultNow},
+        {"fault-over", ST_MPC::Status::FaultOver}
+    };
 }
 
 CommandHandler::CommandHandler(SerialConnection& conn, Logger& loggerRef) : CommandHandler(conn) 
@@ -137,6 +153,67 @@ CommandHandler::CommandResult CommandHandler::processCommand(const std::string& 
     }
 }
 
+const std::string CommandHandler::printAllRegisters()
+{
+    std::stringstream ss;
+    for (const auto& reg : registerMap) {
+        ss << std::left << "\t" << std::setw(25) << reg.first 
+            << " - (0x" << std::right
+            << std::hex << std::setw(2) << std::setfill('0') 
+            << static_cast<unsigned int>(reg.second.id) << ")"
+            << std::setfill(' ') << std::dec << " - ";
+        switch (reg.second.type) {
+            case ST_MPC::RegisterType::UInt8: 
+                ss << "UInt8"; 
+                break;
+            case ST_MPC::RegisterType::UInt16: 
+                ss << "UInt16"; 
+                break;
+            case ST_MPC::RegisterType::UInt32: 
+                ss << "UInt32"; 
+                break;
+            case ST_MPC::RegisterType::Int16: 
+                ss << "Int16"; 
+                break;
+            case ST_MPC::RegisterType::Int32: 
+                ss << "Int32"; 
+                break;
+            case ST_MPC::RegisterType::CharPtr: 
+                ss << "CharPtr"; 
+                break;
+            default: 
+                ss << "Unknown"; 
+                break;
+        }
+        ss << "\n";
+    }
+    return ss.str();
+}
+
+const std::string CommandHandler::printAllExecutes()
+{
+    std::stringstream ss;
+    for (const auto& exec : executeMap) {
+        ss << "\t" << exec.first << "\n";
+    }
+    return ss.str();
+}
+
+const std::string CommandHandler::printAllStatuses()
+{
+    std::stringstream ss;
+    for (const auto& status : statusMap) {
+        ss << "\t" 
+           << std::left << std::setw(25) << status.first
+           << " - (0x" 
+           << std::right << std::hex << std::setw(2) << std::setfill('0') 
+           << static_cast<unsigned int>(status.second) 
+           << ")" << std::dec << std::setfill(' ')
+           << "\n";
+    }
+    return ss.str();
+}
+
 CommandHandler::CommandResult CommandHandler::handleSetRegister(const std::string& args)
 {
     std::istringstream iss(args);
@@ -149,7 +226,7 @@ CommandHandler::CommandResult CommandHandler::handleSetRegister(const std::strin
 
     try {
         auto reg = getRegister(regName);
-        auto frame = frameBuilder.buildSetRegisterFrame(1, reg.id, regVal, reg.type);
+        auto frame = frameBuilder.buildSetFrame(1, reg.id, regVal, reg.type);
         auto response = sendAndProcessResponse(frame);
         return {true, "Register '" + regName + "' set to " + std::to_string(regVal) + "\n" + response};
     } catch (const std::exception& e) {
@@ -167,7 +244,7 @@ CommandHandler::CommandResult CommandHandler::handleGetRegister(const std::strin
 
     try {
         auto reg = getRegister(regName);
-        auto frame = frameBuilder.buildGetRegisterFrame(1, reg.id);
+        auto frame = frameBuilder.buildGetFrame(1, reg.id);
         auto response = sendAndProcessResponse(frame, reg.type);
         return {true, "Register '" + regName + "' response: " + response};
     }
@@ -210,12 +287,32 @@ CommandHandler::CommandResult CommandHandler::handleRamp(const std::string& args
     }
 
     try {
-        auto frame = frameBuilder.buildExecuteRampFrame(1, finalSpeed, static_cast<uint16_t>(duration));
+        auto frame = frameBuilder.buildRampFrame(1, finalSpeed, static_cast<uint16_t>(duration));
         auto response = sendAndProcessResponse(frame);
         return {true, "Started ramp: " + std::to_string(finalSpeed) + " rpm over " 
                     + std::to_string(duration) + " ms\n" + response};
     } catch (const std::exception& e) {
         return handleError("handleRamp failed", e);
+    }
+}
+
+CommandHandler::CommandResult CommandHandler::handleCurrentRef(const std::string& args)
+{
+    std::istringstream iss(args);
+    int16_t IqRef;
+    int16_t IdRef;
+
+    if (!(iss >> IqRef >> IdRef)) {
+        return {false, "Usage: current-ref <Iq> <Id>"};
+    }
+
+    try {
+        auto frame = frameBuilder.buildCurrentFrame(1, IqRef, IdRef);
+        auto response = sendAndProcessResponse(frame);
+        return {true, "Set current references to Iq: " + std::to_string(IqRef) + ", Id: " 
+                + std::to_string(IdRef) + "\n" + response};
+    } catch (const std::exception& e) {
+        return handleError("handleCurrentRef failed", e);
     }
 }
 

@@ -1,7 +1,7 @@
 # Compiler and flags
 CXX = g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -pedantic -Og -g
-LDFLAGS = -lboost_system -lboost_thread -lpthread
+LDFLAGS = -lboost_system -lboost_thread -lpthread -lreadline
 
 # Directories
 OBJDIR = obj
