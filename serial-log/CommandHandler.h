@@ -38,8 +38,8 @@ private:
     void handleExecuteRamp(const std::string& args);
     
     // Logging command handlers
-    void handleLogStart(const std::string& args);
-    void handleLogStop(const std::string& args);
+    void handleLogStart();
+    void handleLogStop();
     void handleLogAdd(const std::string& args);
     void handleLogRemove(const std::string& args);
     

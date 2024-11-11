@@ -18,8 +18,8 @@ void CommandHandler::initializeMaps()
     m_commandMap["ramp"] = [this](const std::string& args) { handleExecuteRamp(args); };
     m_commandMap["log-add"] = [this](const std::string& args) { handleLogAdd(args); };
     m_commandMap["log-remove"] = [this](const std::string& args) { handleLogRemove(args); };
-    m_commandMap["log-start"] = [this](const std::string& args) { handleLogStart(args); };
-    m_commandMap["log-stop"] = [this](const std::string& args) { handleLogStop(args); };
+    m_commandMap["log-start"] = [this](const std::string&) { handleLogStart(); };
+    m_commandMap["log-stop"] = [this](const std::string&) { handleLogStop(); };
 
     registerIdMap = {
         {"Flags", ST_MPC::RegisterId::Flags},
@@ -179,13 +179,13 @@ void CommandHandler::handleExecuteRamp(const std::string& args)
     sendAndProcessResponse(frame);
 }
 
-void CommandHandler::handleLogStart(const std::string& args) 
+void CommandHandler::handleLogStart() 
 {
     m_logger->startLogging();
     std::cout << "Logging started." << std::endl;
 }
 
-void CommandHandler::handleLogStop(const std::string& args) 
+void CommandHandler::handleLogStop() 
 {
     m_logger->stopLogging();
     std::cout << "Logging stopped." << std::endl;

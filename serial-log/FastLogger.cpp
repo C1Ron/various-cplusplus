@@ -5,7 +5,7 @@
 FastLogger::FastLogger(SerialConnection& serial,
      const std::unordered_map<ST_MPC::RegisterId, ST_MPC::RegisterType>& regTypeMap,
      const std::string& logFile)
-    : m_serial(serial),  m_isRunning(false), m_regTypeMap(regTypeMap)
+    : m_serial(serial), m_regTypeMap(regTypeMap), m_isRunning(false)
 {
     // Open the file in trunc mode to clear existing content
     m_logFile.open(logFile, std::ios::out | std::ios::trunc);
