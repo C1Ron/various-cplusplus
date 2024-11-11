@@ -98,11 +98,11 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
         {"start", ST_MPC::ExecuteId::StartMotor},
         {"stop", ST_MPC::ExecuteId::StopMotor},
         {"align", ST_MPC::ExecuteId::EncoderAlign},
-        {"startstop", ST_MPC::ExecuteId::StartStop},
-        {"stopramp", ST_MPC::ExecuteId::StopRamp},
+        {"start-stop", ST_MPC::ExecuteId::StartStop},
+        {"stop-ramp", ST_MPC::ExecuteId::StopRamp},
         {"reset", ST_MPC::ExecuteId::Reset},
         {"ping", ST_MPC::ExecuteId::Ping},
-        {"faultack", ST_MPC::ExecuteId::FaultAck}
+        {"fault-ack", ST_MPC::ExecuteId::FaultAck}
     };
 
     statusMap = 
