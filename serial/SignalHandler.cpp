@@ -1,22 +1,35 @@
 #include "SignalHandler.h"
-#include <csignal>
 #include <iostream>
 
 std::atomic<bool> SignalHandler::exitFlag{false};
+SignalHandler::ShutdownCallback SignalHandler::shutdownCallback;
 
-void SignalHandler::setup() 
+void SignalHandler::setup(ShutdownCallback callback) 
 {
+    shutdownCallback = std::move(callback);
     std::signal(SIGINT, handleSignal);  // Ctrl+C
     std::signal(SIGTERM, handleSignal); // Termination request
+    std::signal(SIGTSTP, handleSignal); // Ctrl+Z
 }
 
-bool SignalHandler::shouldExit() 
+bool SignalHandler::shouldExit(bool setExit) 
 {
-    return exitFlag.load();
+    if (setExit) {
+        exitFlag.store(true, std::memory_order_release);
+    }
+    return exitFlag.load(std::memory_order_acquire);
 }
 
-void SignalHandler::handleSignal([[maybe_unused]] int signum) 
+void SignalHandler::reset() 
+{
+    exitFlag.store(false, std::memory_order_release);
+}
+
+void SignalHandler::handleSignal(int signum) 
 {
     std::cout << "\nInterrupt signal (" << signum << ") received." << std::endl;
-    exitFlag.store(true);
+    exitFlag.store(true, std::memory_order_release);
+    if (shutdownCallback) {
+        shutdownCallback();
+    }
 }

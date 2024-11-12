@@ -18,77 +18,77 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
     // Initialize register map with type information and descriptions
     registerMap = 
     {
-        {"MotorId", {ST_MPC::RegisterId::TargetMotor, ST_MPC::RegisterType::UInt8}},
-        {"Flags", {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
-        {"Status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
-        {"ControlMode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
-        {"SpeedRef", {ST_MPC::RegisterId::SpeedRef, ST_MPC::RegisterType::Int32}},
-        {"SpeedKp", {ST_MPC::RegisterId::SpeedKp, ST_MPC::RegisterType::UInt16}},
-        {"SpeedKi", {ST_MPC::RegisterId::SpeedKi, ST_MPC::RegisterType::UInt16}},
-        {"SpeedKd", {ST_MPC::RegisterId::SpeedKd, ST_MPC::RegisterType::UInt16}},
-        {"TorqueRef", {ST_MPC::RegisterId::TorqueRef, ST_MPC::RegisterType::Int16}},
-        {"TorqueKp", {ST_MPC::RegisterId::TorqueKp, ST_MPC::RegisterType::UInt16}},
-        {"TorqueKi", {ST_MPC::RegisterId::TorqueKi, ST_MPC::RegisterType::UInt16}},
-        {"TorqueKd", {ST_MPC::RegisterId::TorqueKd, ST_MPC::RegisterType::UInt16}},
-        {"FluxRef", {ST_MPC::RegisterId::FluxRef, ST_MPC::RegisterType::Int16}},
-        {"FluxKp", {ST_MPC::RegisterId::FluxKp, ST_MPC::RegisterType::UInt16}},
-        {"FluxKi", {ST_MPC::RegisterId::FluxKi, ST_MPC::RegisterType::UInt16}},
-        {"FluxKd", {ST_MPC::RegisterId::FluxKd, ST_MPC::RegisterType::UInt16}},
-        {"Status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
-        {"Flags",  {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
-        {"ControlMode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
-        {"MotorPower", {ST_MPC::RegisterId::MotorPower, ST_MPC::RegisterType::UInt16}},
-        {"SpeedMeas", {ST_MPC::RegisterId::SpeedMeas, ST_MPC::RegisterType::Int32}},
-        {"TorqueMeas", {ST_MPC::RegisterId::TorqueMeas, ST_MPC::RegisterType::Int16}},
-        {"FluxMeas", {ST_MPC::RegisterId::FluxMeas, ST_MPC::RegisterType::Int16}},
+        {"motor-id", {ST_MPC::RegisterId::TargetMotor, ST_MPC::RegisterType::UInt8}},
+        {"flags", {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
+        {"status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
+        {"control-mode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
+        {"speed-ref", {ST_MPC::RegisterId::SpeedRef, ST_MPC::RegisterType::Int32}},
+        {"speed-Kp", {ST_MPC::RegisterId::SpeedKp, ST_MPC::RegisterType::UInt16}},
+        {"speed-Ki", {ST_MPC::RegisterId::SpeedKi, ST_MPC::RegisterType::UInt16}},
+        {"speed-Kd", {ST_MPC::RegisterId::SpeedKd, ST_MPC::RegisterType::UInt16}},
+        {"torque-ref", {ST_MPC::RegisterId::TorqueRef, ST_MPC::RegisterType::Int16}},
+        {"torque-Kp", {ST_MPC::RegisterId::TorqueKp, ST_MPC::RegisterType::UInt16}},
+        {"torque-Ki", {ST_MPC::RegisterId::TorqueKi, ST_MPC::RegisterType::UInt16}},
+        {"torque-Kd", {ST_MPC::RegisterId::TorqueKd, ST_MPC::RegisterType::UInt16}},
+        {"flux-ref", {ST_MPC::RegisterId::FluxRef, ST_MPC::RegisterType::Int16}},
+        {"flux-Kp", {ST_MPC::RegisterId::FluxKp, ST_MPC::RegisterType::UInt16}},
+        {"flux-Ki", {ST_MPC::RegisterId::FluxKi, ST_MPC::RegisterType::UInt16}},
+        {"flux-Kd", {ST_MPC::RegisterId::FluxKd, ST_MPC::RegisterType::UInt16}},
+        {"status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
+        {"flags",  {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
+        {"control-mode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
+        {"motor-power", {ST_MPC::RegisterId::MotorPower, ST_MPC::RegisterType::UInt16}},
+        {"speed-meas", {ST_MPC::RegisterId::SpeedMeas, ST_MPC::RegisterType::Int32}},
+        {"torque-meas", {ST_MPC::RegisterId::TorqueMeas, ST_MPC::RegisterType::Int16}},
+        {"flux-meas", {ST_MPC::RegisterId::FluxMeas, ST_MPC::RegisterType::Int16}},
         {"Ia", {ST_MPC::RegisterId::Ia, ST_MPC::RegisterType::Int16}},
         {"Ib", {ST_MPC::RegisterId::Ib, ST_MPC::RegisterType::Int16}},
         {"Ialpha", {ST_MPC::RegisterId::Ialpha, ST_MPC::RegisterType::Int16}},
         {"Ibeta", {ST_MPC::RegisterId::Ibeta, ST_MPC::RegisterType::Int16}},
         {"Iq", {ST_MPC::RegisterId::Iq, ST_MPC::RegisterType::Int16}},
         {"Id", {ST_MPC::RegisterId::Id, ST_MPC::RegisterType::Int16}},
-        {"IqRef", {ST_MPC::RegisterId::IqRef, ST_MPC::RegisterType::Int16}},
-        {"IdRef", {ST_MPC::RegisterId::IdRef, ST_MPC::RegisterType::Int16}},
+        {"Iq-ref", {ST_MPC::RegisterId::IqRef, ST_MPC::RegisterType::Int16}},
+        {"Id-ref", {ST_MPC::RegisterId::IdRef, ST_MPC::RegisterType::Int16}},
         {"Vq", {ST_MPC::RegisterId::Vq, ST_MPC::RegisterType::Int16}},
         {"Vd", {ST_MPC::RegisterId::Vd, ST_MPC::RegisterType::Int16}},
         {"Valpha", {ST_MPC::RegisterId::Valpha, ST_MPC::RegisterType::Int16}},
         {"Vbeta", {ST_MPC::RegisterId::Vbeta, ST_MPC::RegisterType::Int16}},
-        {"ElAngleMeas", {ST_MPC::RegisterId::ElAngleMeas, ST_MPC::RegisterType::Int16}},
-        {"RampFinalSpeed", {ST_MPC::RegisterId::RampFinalSpeed, ST_MPC::RegisterType::Int32}},
-        {"RampDuration", {ST_MPC::RegisterId::RampDuration, ST_MPC::RegisterType::UInt16}},
-        {"SpeedKpDiv", {ST_MPC::RegisterId::SpeedKpDiv, ST_MPC::RegisterType::UInt16}},
-        {"SpeedKiDiv", {ST_MPC::RegisterId::SpeedKiDiv, ST_MPC::RegisterType::UInt16}},
-        {"TransDetReg1000", {ST_MPC::RegisterId::TransDetReg1000, ST_MPC::RegisterType::UInt8}},
-        {"TransDetReg1200", {ST_MPC::RegisterId::TransDetReg1200, ST_MPC::RegisterType::UInt8}},
-        {"TransDetReg1300", {ST_MPC::RegisterId::TransDetReg1300, ST_MPC::RegisterType::UInt8}},
-        {"TransDetRegId", {ST_MPC::RegisterId::TransDetRegId, ST_MPC::RegisterType::UInt8}},
-        {"DeadTimeRegId", {ST_MPC::RegisterId::DeadTimeRegId, ST_MPC::RegisterType::UInt8}},
-        {"DeadTimeRegA", {ST_MPC::RegisterId::DeadTimeRegA, ST_MPC::RegisterType::UInt8}},
-        {"DeadTimeRegB", {ST_MPC::RegisterId::DeadTimeRegB, ST_MPC::RegisterType::UInt8}},
-        {"GdrPwrDis", {ST_MPC::RegisterId::GdrPwrDis, ST_MPC::RegisterType::UInt8}},
-        {"GdrPwmEn", {ST_MPC::RegisterId::GdrPwmEn, ST_MPC::RegisterType::UInt8}},
-        {"GdrFltPhA", {ST_MPC::RegisterId::GdrFltPhA, ST_MPC::RegisterType::UInt8}},
-        {"GdrFltPhB", {ST_MPC::RegisterId::GdrFltPhB, ST_MPC::RegisterType::UInt8}},
-        {"GdrFltPhC", {ST_MPC::RegisterId::GdrFltPhC, ST_MPC::RegisterType::UInt8}},
-        {"GdrTempPhA", {ST_MPC::RegisterId::GdrTempPhA, ST_MPC::RegisterType::UInt32}},
-        {"GdrTempPhB", {ST_MPC::RegisterId::GdrTempPhB, ST_MPC::RegisterType::UInt32}},
-        {"GdrTempPhC", {ST_MPC::RegisterId::GdrTempPhC, ST_MPC::RegisterType::UInt32}},
-        {"MuxRegId", {ST_MPC::RegisterId::MuxRegId, ST_MPC::RegisterType::UInt8}},
-        {"TorqueKpDivPow2", {ST_MPC::RegisterId::TorqueKpDivPow2, ST_MPC::RegisterType::UInt16}},
-        {"TorqueKiDivPow2", {ST_MPC::RegisterId::TorqueKiDivPow2, ST_MPC::RegisterType::UInt16}},
-        {"FluxKpDivPow2", {ST_MPC::RegisterId::FluxKpDivPow2, ST_MPC::RegisterType::UInt16}},
-        {"FluxKiDivPow2", {ST_MPC::RegisterId::FluxKiDivPow2, ST_MPC::RegisterType::UInt16}},
-        {"SpeedKpDivPow2", {ST_MPC::RegisterId::SpeedKpDivPow2, ST_MPC::RegisterType::UInt16}},
-        {"SpeedKiDivPow2", {ST_MPC::RegisterId::SpeedKiDivPow2, ST_MPC::RegisterType::UInt16}},
-        {"TorqueKpDiv", {ST_MPC::RegisterId::TorqueKpDiv, ST_MPC::RegisterType::UInt16}},
-        {"TorqueKiDiv", {ST_MPC::RegisterId::TorqueKiDiv, ST_MPC::RegisterType::UInt16}},
-        {"FluxKpDiv", {ST_MPC::RegisterId::FluxKpDiv, ST_MPC::RegisterType::UInt16}},
-        {"FluxKiDiv", {ST_MPC::RegisterId::FluxKiDiv, ST_MPC::RegisterType::UInt16}},
-        {"AlignFinalFlux", {ST_MPC::RegisterId::AlignFinalFlux, ST_MPC::RegisterType::UInt16}},
-        {"AlignRampUpDuration", {ST_MPC::RegisterId::AlignRampUpDuration, ST_MPC::RegisterType::UInt16}},
-        {"AlignRampDownDuration", {ST_MPC::RegisterId::AlignRampDownDuration, ST_MPC::RegisterType::UInt16}},
-        {"IsAligned", {ST_MPC::RegisterId::IsAligned, ST_MPC::RegisterType::UInt16}},
-        {"GitVersion", {ST_MPC::RegisterId::GitVersion, ST_MPC::RegisterType::CharPtr}}
+        {"el-angle-meas", {ST_MPC::RegisterId::ElAngleMeas, ST_MPC::RegisterType::Int16}},
+        {"ramp-final-speed", {ST_MPC::RegisterId::RampFinalSpeed, ST_MPC::RegisterType::Int32}},
+        {"ramp-duration", {ST_MPC::RegisterId::RampDuration, ST_MPC::RegisterType::UInt16}},
+        {"speed-Kp-div", {ST_MPC::RegisterId::SpeedKpDiv, ST_MPC::RegisterType::UInt16}},
+        {"speed-Ki-div", {ST_MPC::RegisterId::SpeedKiDiv, ST_MPC::RegisterType::UInt16}},
+        {"trans-det-1000", {ST_MPC::RegisterId::TransDetReg1000, ST_MPC::RegisterType::UInt8}},
+        {"trans-det-1200", {ST_MPC::RegisterId::TransDetReg1200, ST_MPC::RegisterType::UInt8}},
+        {"trans-det-1300", {ST_MPC::RegisterId::TransDetReg1300, ST_MPC::RegisterType::UInt8}},
+        {"trans-det-Id", {ST_MPC::RegisterId::TransDetRegId, ST_MPC::RegisterType::UInt8}},
+        {"dead-time-Id", {ST_MPC::RegisterId::DeadTimeRegId, ST_MPC::RegisterType::UInt8}},
+        {"dead-time-A", {ST_MPC::RegisterId::DeadTimeRegA, ST_MPC::RegisterType::UInt8}},
+        {"dead-time-B", {ST_MPC::RegisterId::DeadTimeRegB, ST_MPC::RegisterType::UInt8}},
+        {"gdr-pwr-dis", {ST_MPC::RegisterId::GdrPwrDis, ST_MPC::RegisterType::UInt8}},
+        {"gdr-pwm-en", {ST_MPC::RegisterId::GdrPwmEn, ST_MPC::RegisterType::UInt8}},
+        {"gdr-flt-A", {ST_MPC::RegisterId::GdrFltPhA, ST_MPC::RegisterType::UInt8}},
+        {"gdr-flt-B", {ST_MPC::RegisterId::GdrFltPhB, ST_MPC::RegisterType::UInt8}},
+        {"gdr-flt-C", {ST_MPC::RegisterId::GdrFltPhC, ST_MPC::RegisterType::UInt8}},
+        {"gdr-temp-A", {ST_MPC::RegisterId::GdrTempPhA, ST_MPC::RegisterType::UInt32}},
+        {"gdr-temp-B", {ST_MPC::RegisterId::GdrTempPhB, ST_MPC::RegisterType::UInt32}},
+        {"gdr-temp-C", {ST_MPC::RegisterId::GdrTempPhC, ST_MPC::RegisterType::UInt32}},
+        {"mux-Id", {ST_MPC::RegisterId::MuxRegId, ST_MPC::RegisterType::UInt8}},
+        {"torque-Kp-div-pow2", {ST_MPC::RegisterId::TorqueKpDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"torque-Ki-div-pow2", {ST_MPC::RegisterId::TorqueKiDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"flux-Kp-div-pow2", {ST_MPC::RegisterId::FluxKpDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"flux-Ki-div-pow2", {ST_MPC::RegisterId::FluxKiDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"speed-Kp-div-pow2", {ST_MPC::RegisterId::SpeedKpDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"speed-Ki-div-pow2", {ST_MPC::RegisterId::SpeedKiDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"torque-Kp-div", {ST_MPC::RegisterId::TorqueKpDiv, ST_MPC::RegisterType::UInt16}},
+        {"torque-Ki-div", {ST_MPC::RegisterId::TorqueKiDiv, ST_MPC::RegisterType::UInt16}},
+        {"flux-Kp-div", {ST_MPC::RegisterId::FluxKpDiv, ST_MPC::RegisterType::UInt16}},
+        {"flux-Ki-div", {ST_MPC::RegisterId::FluxKiDiv, ST_MPC::RegisterType::UInt16}},
+        {"align-final-flux", {ST_MPC::RegisterId::AlignFinalFlux, ST_MPC::RegisterType::UInt16}},
+        {"align-ramp-up-duration", {ST_MPC::RegisterId::AlignRampUpDuration, ST_MPC::RegisterType::UInt16}},
+        {"align-ramp-down-duration", {ST_MPC::RegisterId::AlignRampDownDuration, ST_MPC::RegisterType::UInt16}},
+        {"is-aligned", {ST_MPC::RegisterId::IsAligned, ST_MPC::RegisterType::UInt16}},
+        {"git-version", {ST_MPC::RegisterId::GitVersion, ST_MPC::RegisterType::CharPtr}}
 
     };
 
@@ -131,6 +131,7 @@ CommandHandler::CommandHandler(SerialConnection& conn, Logger& loggerRef) : Comm
     commandMap["log-add"] = [this](const std::string& args) { return handleLogAdd(args); };
     commandMap["log-remove"] = [this](const std::string& args) { return handleLogRemove(args); };
     commandMap["log-status"] = [this](const std::string& args) { return handleLogStatus(args); };
+    commandMap["log-config"] = [this](const std::string& args) { return handleLogConfig(args); };
 }
 
 CommandHandler::CommandResult CommandHandler::processCommand(const std::string& command)
@@ -153,7 +154,7 @@ CommandHandler::CommandResult CommandHandler::processCommand(const std::string& 
     }
 }
 
-const std::string CommandHandler::printAllRegisters()
+const std::string CommandHandler::printAllRegisters() const
 {
     std::stringstream ss;
     for (const auto& reg : registerMap) {
@@ -190,7 +191,7 @@ const std::string CommandHandler::printAllRegisters()
     return ss.str();
 }
 
-const std::string CommandHandler::printAllExecutes()
+const std::string CommandHandler::printAllExecutes() const
 {
     std::stringstream ss;
     for (const auto& exec : executeMap) {
@@ -199,7 +200,7 @@ const std::string CommandHandler::printAllExecutes()
     return ss.str();
 }
 
-const std::string CommandHandler::printAllStatuses()
+const std::string CommandHandler::printAllStatuses() const
 {
     std::stringstream ss;
     for (const auto& status : statusMap) {
@@ -401,6 +402,34 @@ CommandHandler::CommandResult CommandHandler::handleLogStatus(const std::string&
     }
     
     return {true, status};
+}
+
+CommandHandler::CommandResult CommandHandler::handleLogConfig(const std::string& args)
+{
+    if (!logger) {
+        return {false, "Logging is not enabled"};
+    }
+
+    std::istringstream iss(args);
+    std::string filename;
+    int sampleInterval;
+
+    if (!(iss >> filename >> sampleInterval)) {
+        return {false, "Usage: log-config <filename> <sample_interval_ms>"};
+    }
+
+    if (sampleInterval <= 0) {
+        return {false, "Sample interval must be positive"};
+    }
+
+    // Start with current config to preserve other settings
+    Logger::LogConfig config = logger->getConfig();
+    config.filename = filename;
+    config.sampleInterval = std::chrono::milliseconds(sampleInterval);
+    
+    logger->setConfig(config);
+
+    return {true, "Logging configuration updated"};
 }
 
 CommandHandler::CommandResult CommandHandler::handleError(const std::string& message, const std::exception& e) const 

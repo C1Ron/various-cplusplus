@@ -23,9 +23,9 @@ public:
     CommandHandler(SerialConnection& conn);
     CommandHandler(SerialConnection& conn, Logger& logger);
     CommandResult processCommand(const std::string& command);
-    const std::string printAllRegisters();
-    const std::string printAllExecutes();
-    const std::string printAllStatuses();
+    const std::string printAllRegisters() const;
+    const std::string printAllExecutes() const;
+    const std::string printAllStatuses() const;
 
 private:
     struct Register 
@@ -45,6 +45,7 @@ private:
     CommandResult handleLogAdd(const std::string& args);
     CommandResult handleLogRemove(const std::string& args);
     CommandResult handleLogStatus(const std::string& args);
+    CommandResult handleLogConfig(const std::string& args);
     CommandResult handleError(const std::string& message, const std::exception& e) const;
 
     // Helper methods

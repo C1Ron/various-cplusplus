@@ -6,12 +6,12 @@ fig, (ax1,ax2) = plt.subplots(2,1, sharex = True)
 sx = 200
 def animateFunc(i):
         
-    df = pd.read_csv('log.csv', sep = ',', index_col=False)
+    df = pd.read_csv('test-log.csv', sep = ',', index_col=False)
     t = df.Timestamp.to_numpy()
     t = (t - t[0])/1e6
     try:
-        speed = df['SpeedRef'].to_numpy()
-        torque = df['TorqueRef'].to_numpy()
+        speed = df['speed-ref'].to_numpy()
+        torque = df['torque-ref'].to_numpy()
         ax1.clear()
         ax2.clear()
         ax1.set_ylim([-2000, 2000])

@@ -32,6 +32,8 @@ public:
     void stop();
     bool isRunning() const { return running.load(); }
     std::vector<std::string> getLoggedRegisters() const;
+    void setConfig(const LogConfig& newConfig);         // Setter for config
+    const LogConfig& getConfig() const;                 // Getter for config
 
 private:
     struct RegisterInfo 
@@ -50,7 +52,8 @@ private:
     SerialConnection& serial;
     LogConfig config;
     std::ofstream logFile;
-    
+    bool fileOpened{false};
+
     std::atomic<bool> running{false};
     std::thread loggerThread;
     

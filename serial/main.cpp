@@ -65,7 +65,12 @@ int main(int argc, char* argv[])
         CommandHandler handler(serial, logger);
         
         // Setup signal handler
-        SignalHandler::setup();
+        SignalHandler::reset();
+        SignalHandler::setup([&logger] 
+        { 
+            logger.stop(); 
+        });
+
         
         std::cout << "Motor Control Interface\n"
                   << "Type 'help' for available commands\n";

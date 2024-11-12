@@ -9,11 +9,7 @@ std::mutex Logger::readMutex;  // Define static mutex
 Logger::Logger(SerialConnection& serial, const LogConfig& config)
     : serial(serial), config(config) 
 {
-    
-    logFile.open(config.filename, std::ios::out | std::ios::trunc);
-    if (!logFile.is_open()) {
-        throw std::runtime_error("Unable to open log file: " + config.filename);
-    }
+    // Intentionally empty
 }
 
 Logger::~Logger() 
@@ -27,6 +23,16 @@ Logger::~Logger()
 void Logger::start() 
 {
     if (!running.exchange(true)) {
+        // Open file if not already opened
+        if (!fileOpened) {
+            logFile.open(config.filename, std::ios::out | std::ios::trunc);
+            if (!logFile.is_open()) {
+                running.store(false);
+                throw std::runtime_error("Unable to open log file: " + config.filename);
+            }
+            fileOpened = true;
+        }
+
         writeHeader();
         loggerThread = std::thread(&Logger::loggingThread, this);
     }
@@ -34,9 +40,14 @@ void Logger::start()
 
 void Logger::stop() 
 {
-    running.store(false);
-    if (loggerThread.joinable()) {
-        loggerThread.join();
+    if (running.exchange(false)) {
+        if (loggerThread.joinable()) {
+            loggerThread.join();
+        }
+        if (logFile.is_open()) {
+            logFile.close();
+            fileOpened = false;
+        }
     }
 }
 
@@ -272,4 +283,18 @@ void Logger::loggingThread()
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
+}
+
+void Logger::setConfig(const LogConfig& newConfig) 
+{
+    if (running) {
+        throw std::runtime_error("Cannot change config while logger is running");
+    }
+    config = newConfig;
+    fileOpened = false;  // Force file to be reopened with new name
+}
+
+const Logger::LogConfig& Logger::getConfig() const 
+{
+    return config;
 }
