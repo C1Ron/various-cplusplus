@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -6,7 +7,7 @@ fig, (ax1,ax2) = plt.subplots(2,1, sharex = True)
 sx = 200
 def animateFunc(i):
         
-    df = pd.read_csv('test-log.csv', sep = ',', index_col=False)
+    df = pd.read_csv(sys.argv[1], sep = ',', index_col=False)
     t = df.Timestamp.to_numpy()
     t = (t - t[0])/1e6
     try:

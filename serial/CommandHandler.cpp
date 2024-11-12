@@ -326,6 +326,7 @@ CommandHandler::CommandResult CommandHandler::handleLogStart(const std::string& 
         return {false, "Usage: log-start"};
     }
     logger->start();
+    startPlot();
     return {true, "Logging started"};
 }
 
@@ -337,6 +338,7 @@ CommandHandler::CommandResult CommandHandler::handleLogStop(const std::string& a
     if (!args.empty()) {
         return {false, "Usage: log-stop"};
     }
+    stopPlot();
     logger->stop();
     return {true, "Logging stopped"};
 }
@@ -387,7 +389,7 @@ CommandHandler::CommandResult CommandHandler::handleLogStatus(const std::string&
     if (!args.empty()) {
         return {false, "Usage: log-status"};
     }
-    
+    Logger::LogConfig logConfig = logger->getConfig();
     std::string status = "Logging status:\n";
     status += "Running: " + std::string(logger->isRunning() ? "yes" : "no") + "\n";
     status += "Logged registers:\n";
@@ -400,6 +402,9 @@ CommandHandler::CommandResult CommandHandler::handleLogStatus(const std::string&
             status += "  " + reg + "\n";
         }
     }
+    status += "Config:\n";
+    status += "  Filename: " + logConfig.filename + "\n";
+    status += "  Sample interval: " + std::to_string(logConfig.sampleInterval.count()) + " ms\n";
     
     return {true, status};
 }
@@ -461,4 +466,27 @@ std::string CommandHandler::sendAndProcessResponse(const std::vector<uint8_t>& f
     frameInterpreter.printResponse(response);
     return frameInterpreter.interpretResponse(response, type);
 
+}
+
+void CommandHandler::startPlot()
+{
+    pid_t pid = fork();
+    if (pid == 0) {
+        Logger::LogConfig config = logger->getConfig();
+        execlp("python3", "python3", "plot.py", config.filename.c_str(), nullptr);
+        std::cerr << "Failed to start plotter process" << std::endl;
+    } else if (pid > 0) {
+        std::cout << "Plotter process started with PID " << pid << std::endl;
+        plotterPid = pid;
+    } else {
+        std::cerr << "Failed to fork plotter process" << std::endl;
+    }
+}
+
+void CommandHandler::stopPlot()
+{
+    if (plotterPid > 0) {
+        kill(plotterPid, SIGTERM);
+        plotterPid = 0;
+    }
 }

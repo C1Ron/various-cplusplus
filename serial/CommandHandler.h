@@ -10,6 +10,10 @@
 #include <functional>
 #include <vector>
 #include "Logger.h"
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
 
 class CommandHandler 
 {
@@ -64,6 +68,10 @@ private:
     std::unordered_map<std::string, Register> registerMap;
     std::unordered_map<std::string, ST_MPC::ExecuteId> executeMap;
     std::unordered_map<std::string, ST_MPC::Status> statusMap;
+
+    pid_t plotterPid{0};  // PID of plotter process
+    void startPlot();
+    void stopPlot();
 };
 
 #endif // COMMAND_HANDLER_H
