@@ -6,7 +6,7 @@
 
 std::mutex LoggerRt::readMutex;  // Define static mutex
 
-LoggerRt::LoggerRt(SerialConnection& serial, uint8_t mscId, const LogConfig& config)
+LoggerRt::LoggerRt(SerialConnectionRt& serial, uint8_t mscId, const LogConfig& config)
     : serial(serial), mscId(mscId), config(config) 
 {
     // Intentionally empty

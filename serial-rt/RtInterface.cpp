@@ -5,7 +5,7 @@
 RtInterface::RtInterface(const std::string& port, unsigned int baudRate, uint8_t mscId)
     : mscId(mscId)
 {
-    serial = std::make_unique<SerialConnection>(port, baudRate);
+    serial = std::make_unique<SerialConnectionRt>(port, baudRate);
     logger = std::make_unique<LoggerRt>(*serial, mscId, createLogConfig());
     handler = std::make_unique<CommandHandlerRt>(*serial, mscId, *logger);
     setupSignalHandler();

@@ -1,7 +1,7 @@
 #ifndef LOGGER_RT_H
 #define LOGGER_RT_H
 
-#include "SerialConnection.h"
+#include "SerialConnectionRt.h"
 #include "RtDefinitions.h"
 #include <atomic>
 #include <chrono>
@@ -23,7 +23,7 @@ public:
         bool useTimestamp{true};
     };
 
-    LoggerRt(SerialConnection& serial, uint8_t mscId, const LogConfig& config);
+    LoggerRt(SerialConnectionRt& serial, uint8_t mscId, const LogConfig& config);
     ~LoggerRt();
     
     void start();
@@ -43,7 +43,7 @@ private:
         std::string name;
     };
 
-    SerialConnection& serial;
+    SerialConnectionRt& serial;
     uint8_t mscId;
     LogConfig config;
     std::ofstream logFile;

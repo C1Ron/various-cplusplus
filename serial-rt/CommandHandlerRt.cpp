@@ -2,7 +2,7 @@
 #include <sstream>
 #include <iomanip>
 
-CommandHandlerRt::CommandHandlerRt(SerialConnection& conn, uint8_t mscId) 
+CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId) 
     : connection(conn), mscId(mscId)
 {
     // Initialize command map
@@ -43,7 +43,7 @@ CommandHandlerRt::CommandHandlerRt(SerialConnection& conn, uint8_t mscId)
     };
 }
 
-CommandHandlerRt::CommandHandlerRt(SerialConnection& conn, uint8_t mscId, LoggerRt& logger)
+CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId, LoggerRt& logger)
     : CommandHandlerRt(conn, mscId)
 {
     this->logger = &logger;

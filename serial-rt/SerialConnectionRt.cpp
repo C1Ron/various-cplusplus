@@ -1,13 +1,13 @@
-#include "SerialConnection.h"
+#include "SerialConnectionRt.h"
 #include <iostream>
 
-SerialConnection::SerialConnection(const std::string& port, unsigned int baud_rate)
+SerialConnectionRt::SerialConnectionRt(const std::string& port, unsigned int baud_rate)
     : serial(io, port) 
 {
     configurePort(baud_rate);
 }
 
-SerialConnection::~SerialConnection() 
+SerialConnectionRt::~SerialConnectionRt() 
 {
     try {
         if (serial.is_open()) {
@@ -18,7 +18,7 @@ SerialConnection::~SerialConnection()
     }
 }
 
-void SerialConnection::configurePort(unsigned int baud_rate) 
+void SerialConnectionRt::configurePort(unsigned int baud_rate) 
 {
     serial.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
     serial.set_option(boost::asio::serial_port_base::character_size(8));
@@ -27,12 +27,12 @@ void SerialConnection::configurePort(unsigned int baud_rate)
     serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
 }
 
-void SerialConnection::setTimeout(const std::chrono::milliseconds& timeout) 
+void SerialConnectionRt::setTimeout(const std::chrono::milliseconds& timeout) 
 {
     readTimeout = timeout;
 }
 
-void SerialConnection::sendFrame(const std::vector<uint8_t>& frame) 
+void SerialConnectionRt::sendFrame(const std::vector<uint8_t>& frame) 
 {
     std::lock_guard<std::mutex> lock(serialMutex);
     try {
@@ -42,7 +42,7 @@ void SerialConnection::sendFrame(const std::vector<uint8_t>& frame)
     }
 }
 
-std::vector<uint8_t> SerialConnection::readFrame() 
+std::vector<uint8_t> SerialConnectionRt::readFrame() 
 {
     std::lock_guard<std::mutex> lock(serialMutex);
     try {
@@ -53,7 +53,7 @@ std::vector<uint8_t> SerialConnection::readFrame()
         }
 
         // Debugging
-        std::cout << "SerialConnection::readFrame(): \n";
+        std::cout << "SerialConnectionRt::readFrame(): \n";
         for (const auto& byte : header) {
             std::cout << std::hex << std::setw(2) << std::setfill('0') 
                       << static_cast<int>(byte) << " ";
@@ -74,7 +74,7 @@ std::vector<uint8_t> SerialConnection::readFrame()
         }
 
         // Debugging
-        std::cout << "SerialConnection::readFrame(): remaining\n";
+        std::cout << "SerialConnectionRt::readFrame(): remaining\n";
         for (const auto& byte : remaining) {
             std::cout << std::hex << std::setw(2) << std::setfill('0') 
                       << static_cast<int>(byte) << " ";
@@ -96,13 +96,13 @@ std::vector<uint8_t> SerialConnection::readFrame()
     }
 }
 
-std::vector<uint8_t> SerialConnection::readFrame(size_t size) 
+std::vector<uint8_t> SerialConnectionRt::readFrame(size_t size) 
 {
     std::lock_guard<std::mutex> lock(serialMutex);
     return readWithTimeout(size);
 }
 
-std::vector<uint8_t> SerialConnection::readWithTimeout(size_t size) 
+std::vector<uint8_t> SerialConnectionRt::readWithTimeout(size_t size) 
 {
     std::vector<uint8_t> buffer(size);
     

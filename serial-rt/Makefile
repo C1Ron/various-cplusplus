@@ -9,7 +9,7 @@ OBJDIR = obj
 # Source files
 SRC = mainRtIf.cpp \
       CommandHandlerRt.cpp \
-      SerialConnection.cpp \
+      SerialConnectionRt.cpp \
       FrameBuilderRt.cpp \
       FrameInterpreterRt.cpp \
       SignalHandler.cpp \
@@ -46,11 +46,11 @@ clean:
 
 # Dependencies
 $(OBJDIR)/mainRtIf.o: mainRtIf.cpp RtInterface.h
-$(OBJDIR)/RtInterface.o: RtInterface.cpp RtInterface.h SerialConnection.h SignalHandler.h LoggerRt.h CommandHandlerRt.h
-$(OBJDIR)/SerialConnection.o: SerialConnection.cpp SerialConnection.h
-$(OBJDIR)/CommandHandlerRt.o: CommandHandlerRt.cpp CommandHandlerRt.h SerialConnection.h \
+$(OBJDIR)/RtInterface.o: RtInterface.cpp RtInterface.h SerialConnectionRt.h SignalHandler.h LoggerRt.h CommandHandlerRt.h
+$(OBJDIR)/SerialConnectionRt.o: SerialConnectionRt.cpp SerialConnectionRt.h
+$(OBJDIR)/CommandHandlerRt.o: CommandHandlerRt.cpp CommandHandlerRt.h SerialConnectionRt.h \
         FrameBuilderRt.h FrameInterpreterRt.h LoggerRt.h RtDefinitions.h
 $(OBJDIR)/FrameBuilderRt.o: FrameBuilderRt.cpp FrameBuilderRt.h RtDefinitions.h
 $(OBJDIR)/FrameInterpreterRt.o: FrameInterpreterRt.cpp FrameInterpreterRt.h RtDefinitions.h
 $(OBJDIR)/SignalHandler.o: SignalHandler.cpp SignalHandler.h
-$(OBJDIR)/LoggerRt.o: LoggerRt.cpp LoggerRt.h SerialConnection.h RtDefinitions.h
+$(OBJDIR)/LoggerRt.o: LoggerRt.cpp LoggerRt.h SerialConnectionRt.h RtDefinitions.h

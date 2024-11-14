@@ -1,7 +1,7 @@
 #ifndef COMMAND_HANDLER_RT_H
 #define COMMAND_HANDLER_RT_H
 
-#include "SerialConnection.h"
+#include "SerialConnectionRt.h"
 #include "FrameBuilderRt.h"
 #include "FrameInterpreterRt.h"
 #include "RtDefinitions.h"
@@ -19,8 +19,8 @@ public:
         std::string message;
     };
 
-    CommandHandlerRt(SerialConnection& conn, uint8_t mscId);
-    CommandHandlerRt(SerialConnection& conn, uint8_t mscId, LoggerRt& logger);
+    CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId);
+    CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId, LoggerRt& logger);
     CommandResult processCommand(const std::string& command);
     const std::string printAllRegisters() const;
     const std::string printAllExecutes() const;
@@ -51,7 +51,7 @@ private:
     std::string sendAndProcessResponse(const std::vector<uint8_t>& frame, RT::RegisterType type);
 
     // Member variables
-    SerialConnection& connection;
+    SerialConnectionRt& connection;
     FrameBuilderRt frameBuilder;
     FrameInterpreterRt frameInterpreter;
     LoggerRt* logger = nullptr;

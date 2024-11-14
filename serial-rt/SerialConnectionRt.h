@@ -1,5 +1,5 @@
-#ifndef SERIAL_CONNECTION_H
-#define SERIAL_CONNECTION_H
+#ifndef SERIAL_CONNECTION_RT_H
+#define SERIAL_CONNECTION_RT_H
 
 #include <utility>  // known issue with boost::asio and C++17
 #include <boost/asio.hpp>
@@ -9,7 +9,7 @@
 #include <mutex>
 #include <iomanip>
 
-class SerialConnection 
+class SerialConnectionRt 
 {
 public:
     class ReadError : public std::runtime_error 
@@ -18,8 +18,8 @@ public:
         explicit ReadError(const std::string& msg) : std::runtime_error(msg) {}
     };
 
-    SerialConnection(const std::string& port, unsigned int baud_rate);
-    ~SerialConnection();
+    SerialConnectionRt(const std::string& port, unsigned int baud_rate);
+    ~SerialConnectionRt();
 
     void sendFrame(const std::vector<uint8_t>& frame);
     std::vector<uint8_t> readFrame();
@@ -37,4 +37,4 @@ private:
     void configurePort(unsigned int baud_rate);
 };
 
-#endif // SERIAL_CONNECTION_H
+#endif // SERIAL_CONNECTION_RT_H
