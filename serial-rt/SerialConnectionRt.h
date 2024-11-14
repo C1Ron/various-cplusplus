@@ -35,6 +35,7 @@ private:
     
     std::vector<uint8_t> readWithTimeout(size_t size);
     void configurePort(unsigned int baud_rate);
+    void clearInputBuffer();
 };
 
 #endif // SERIAL_CONNECTION_RT_H

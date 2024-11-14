@@ -1,3 +1,4 @@
+// FrameInterpreterRt.cpp
 #include "FrameInterpreterRt.h"
 #include <sstream>
 #include <iomanip>
@@ -13,68 +14,146 @@ void FrameInterpreterRt::printResponse(const std::vector<uint8_t>& response)
 
 std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& response) 
 {
-    if (response.size() < 17) {  // Minimum frame size: 16 byte header + 1 byte CRC
+    if (response.size() < 16) {
         return "Error: Invalid response size";
     }
 
-    auto info = parseResponse(response);
+    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY )) {
+        // RT_WRITE_REPLY has a bug
+        return "Success: Write command executed";
+    }
+
+    ResponseInfo info = parseResponse(response);
+    
+    // Handle bad CRC first
     if (!info.validCRC) {
         return "Error: Invalid CRC";
     }
 
-    if (info.isSuccess) {
-        return interpretSuccessResponse(info);
-    } else {
-        return interpretErrorResponse(info);
+    // Handle error codes
+    if (info.header.errorCode != static_cast<uint8_t>(RT::ErrorId::NO_ERROR)) {
+        auto it = errorCodes.find(static_cast<RT::ErrorId>(info.header.errorCode));
+        return "Error: " + (it != errorCodes.end() ? it->second : "Unknown error");
+    }
+
+    // Route to appropriate handler based on command type
+    switch (static_cast<RT::CommandId>(info.header.commandType)) {
+        case RT::CommandId::RT_READ_REPLY:
+            return handleRtRead(info);
+        case RT::CommandId::RT_WRITE_REPLY:
+            return handleRtWrite(info);
+        case RT::CommandId::RT_EXECUTE_REPLY:
+            return handleRtExecute(info);
+        case RT::CommandId::FOC_COMMAND_REPLY:
+            return handleFocCommand(info);
+        default:
+            return "Error: Unknown command type";
     }
 }
 
 std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& response, RT::RegisterType type) 
 {
-    if (response.size() < 17) {  // Minimum frame size: 16 byte header + 1 byte CRC
+    if (response.size() < 16) {
         return "Error: Invalid response size";
     }
 
-    auto info = parseResponse(response);
+    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
+        // RT_WRITE_REPLY has a bug
+        return "Success: Write command executed";
+    }
+
+    ResponseInfo info = parseResponse(response);
+    
     if (!info.validCRC) {
         return "Error: Invalid CRC";
     }
 
-    if (info.isSuccess) {
-        return interpretSuccessResponse(info, type);
-    } else {
-        return interpretErrorResponse(info);
+    if (info.header.commandType == static_cast<uint8_t>(RT::CommandId::RT_READ_REPLY)) {
+        return handleRtRead(info, type);
     }
+
+    return interpretResponse(response);
+}
+
+std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& response, ST_MPC::RegisterType type) 
+{
+    if (response.size() < 16) {
+        return "Error: Invalid response size";
+    }
+
+    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
+        // RT_WRITE_REPLY has a bug
+        return "Success: Write command executed";
+    }
+
+    ResponseInfo info = parseResponse(response);
+    
+    if (!info.validCRC) {
+        return "Error: Invalid CRC";
+    }
+
+    if (info.header.commandType == static_cast<uint8_t>(RT::CommandId::FOC_COMMAND_REPLY)) {
+        return handleFocCommand(info);
+    }
+
+    return interpretResponse(response);
 }
 
 FrameInterpreterRt::ResponseInfo FrameInterpreterRt::parseResponse(const std::vector<uint8_t>& response) 
 {
     ResponseInfo info;
-    
-    // Extract header fields
-    uint8_t commandType = response[10];  // Command type from header
-    uint8_t errorCode = response[11];    // Error code from header
-    
-    // Set success based on error code
-    info.isSuccess = (static_cast<RT::ErrorId>(errorCode) == RT::ErrorId::NO_ERROR);
-    
-    // Get payload size from header
-    info.payloadLength = response[2];
-    
-    // Extract payload (skip 16-byte header, exclude CRC)
+    info.header = parseHeader(response);
+
+    // Handle special case for RT_WRITE_REPLY
+    if (info.header.commandType == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
+        info.validCRC = validateWriteReplyCRC(response);
+        return info;
+    }
+
+    // Extract payload for normal cases
     if (response.size() > 16) {
         info.payload.assign(response.begin() + 16, response.end() - 1);
+        info.crc = response.back();
     }
-    
-    // Validate CRC
+
     info.validCRC = validateCRC(response);
-    
     return info;
 }
 
-bool FrameInterpreterRt::validateCRC(const std::vector<uint8_t>& frame) 
+FrameInterpreterRt::Header FrameInterpreterRt::parseHeader(const std::vector<uint8_t>& response) 
 {
-    if (frame.empty()) return false;
+    Header header;
+    
+    // Field 0
+    header.startByte = response[0];
+    header.totalSize = response[1];
+    header.payloadSize = response[2];
+    header.mscId = response[3];
+    
+    // Field 1
+    header.msgRequestId = response[4];
+    header.msgResponseId = response[5];
+    header.conversationId = response[6];
+    header.senderId = response[7];
+    
+    // Field 2
+    header.numBlocks = response[8];
+    header.seqId = response[9];
+    header.commandType = response[10];
+    header.errorCode = response[11];
+    
+    // Field 3
+    header.futureUse0 = response[12];
+    header.futureUse1 = response[13];
+    header.futureUse2 = response[14];
+    header.endByte = response[15];
+    
+    return header;
+}
+
+bool FrameInterpreterRt::validateCRC(const std::vector<uint8_t>& frame) const 
+{
+    if (frame.size() < 2) return false;
     
     uint16_t sum = 0;
     for (size_t i = 0; i < frame.size() - 1; ++i) {
@@ -85,143 +164,126 @@ bool FrameInterpreterRt::validateCRC(const std::vector<uint8_t>& frame)
     return calculated_crc == frame.back();
 }
 
-std::string FrameInterpreterRt::interpretSuccessResponse(const ResponseInfo& info)
+bool FrameInterpreterRt::validateWriteReplyCRC(const std::vector<uint8_t>& frame) const 
 {
-    if (info.payloadLength == 0) {
-        return "Success: Command executed";
-    }
-    
-    std::string valueStr = formatValue(info.payload);
-    return "Success: " + valueStr;
+    if (frame.size() != 16) return false;
+
+    // Create modified frame with endByte as 0xAA and original endByte as CRC
+    std::vector<uint8_t> modifiedFrame = frame;
+    uint8_t originalCrc = frame[15];
+    modifiedFrame[15] = 0xAA;
+    modifiedFrame.push_back(originalCrc);
+
+    return validateCRC(modifiedFrame);
 }
 
-std::string FrameInterpreterRt::interpretSuccessResponse(const ResponseInfo& info, RT::RegisterType type)
-{
-    if (info.payloadLength == 0) {
-        return "Success: Command executed";
-    }
-    
-    std::string valueStr = formatValue(info.payload, type);
-    return "Success: " + valueStr;
-}
-
-std::string FrameInterpreterRt::interpretErrorResponse(const ResponseInfo& info) 
+std::string FrameInterpreterRt::handleRtRead(const ResponseInfo& info, RT::RegisterType type) 
 {
     if (info.payload.empty()) {
-        return "Error: Unknown error occurred";
+        return "Error: Empty read response";
     }
-    
-    RT::ErrorId errorCode = static_cast<RT::ErrorId>(info.payload[0]);
-    auto it = errorCodes.find(errorCode);
-    if (it != errorCodes.end()) {
-        return "Error: " + it->second;
+
+    for (const auto& byte : info.payload) {
+        std::cout << byteToHex(byte) << " ";
     }
-    
-    return "Error: Unknown error code " + byteToHex(info.payload[0]);
+    std::cout << std::endl;
+    return "Success: " + formatValue(info.payload, type);
 }
 
-std::string FrameInterpreterRt::formatValue(const std::vector<uint8_t>& payload) 
+std::string FrameInterpreterRt::handleRtWrite(const ResponseInfo& info) 
+{
+    // RT_WRITE_REPLY is just an acknowledgment
+    return "Success: Write command executed";
+}
+
+std::string FrameInterpreterRt::handleRtExecute(const ResponseInfo& info) 
+{
+    return "Success: Execute command completed";
+}
+
+std::string FrameInterpreterRt::handleFocCommand(const ResponseInfo& info) 
+{
+    if (info.payload.size() < 2) {
+        return "Error: Invalid FOC response payload";
+    }
+
+    // First byte is msc-id, second is error code
+    uint8_t mscId = info.payload[0];
+    uint8_t errorCode = info.payload[1];
+
+    // Check for FOC error
+    if (errorCode != 0) {
+        return "Error: FOC command failed with error code " + byteToHex(errorCode);
+    }
+
+    return "Success: FOC command executed for MSC " + std::to_string(mscId);
+}
+
+std::string FrameInterpreterRt::formatValue(const std::vector<uint8_t>& payload, RT::RegisterType type) const 
 {
     if (payload.empty()) return "No data";
     
     std::stringstream ss;
-    ss << "Value: ";
-    
-    switch (payload.size()) {
-        case 1: {
-            uint8_t value = payload[0];
-            ss << static_cast<int>(value);
-            ss << " (" << byteToHex(value) << ")";
-            break;
-        }
-        case 2: {
-            int16_t value = static_cast<int16_t>(payload[0] | (payload[1] << 8));
-            ss << value;
-            ss << " (0x" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(value) << ")";
-            break;
-        }
-        case 4: {
-            int32_t value = static_cast<int32_t>(payload[0] | (payload[1] << 8) | 
-                                                (payload[2] << 16) | (payload[3] << 24));
-            ss << value;
-            ss << " (0x" << std::hex << std::setw(8) << std::setfill('0') << value << ")";
-            break;
-        }
-        default: {
-            ss << "Raw data: ";
-            for (const auto& byte : payload) {
-                ss << byteToHex(byte) << " ";
-            }
-            break;
-        }
-    }
-    
-    return ss.str();
-}
 
-std::string FrameInterpreterRt::formatValue(const std::vector<uint8_t>& payload, RT::RegisterType type) 
-{
-    if (payload.empty()) return "No data";
-    
-    std::stringstream ss;
-    ss << "Value: ";
+    // Skip register ID byte for value extraction
+    const uint8_t* valueBytes = payload.data() + 1;
+    size_t valueBytesSize = payload.size() - 1;
     
     switch (type) {
         case RT::RegisterType::UInt8: {
-            if (payload.size() < 1) return "Error: Invalid payload size for UInt8";
-            uint8_t value = payload[0];
-            ss << static_cast<int>(value);
-            ss << " (" << byteToHex(value) << ")";
-            break;
-        }
-        case RT::RegisterType::UInt16: {
-            if (payload.size() < 2) return "Error: Invalid payload size for UInt16";
-            uint16_t value = static_cast<uint16_t>(payload[0] | (payload[1] << 8));
-            ss << value;
-            ss << " (0x" << std::hex << std::setw(4) << std::setfill('0') << value << ")";
+            if (valueBytesSize < 1) return "Error: Invalid payload size for UInt8";
+            uint8_t value = valueBytes[0];
+            ss << "Value: " << static_cast<int>(value);
             break;
         }
         case RT::RegisterType::Int16: {
-            if (payload.size() < 2) return "Error: Invalid payload size for Int16";
-            int16_t value = static_cast<int16_t>(payload[0] | (payload[1] << 8));
-            ss << value;
-            ss << " (0x" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(value) << ")";
+            if (valueBytesSize < 2) return "Error: Invalid payload size for Int16";
+            int16_t value = static_cast<int16_t>(valueBytes[0] | (valueBytes[1] << 8));  // Little-endian
+            ss << "Value: " << value;
             break;
         }
-        case RT::RegisterType::UInt32: {
-            if (payload.size() < 4) return "Error: Invalid payload size for UInt32";
-            uint32_t value = static_cast<uint32_t>(payload[0] | (payload[1] << 8) | 
-                                                (payload[2] << 16) | (payload[3] << 24));
-            ss << value;
-            ss << " (0x" << std::hex << std::setw(8) << std::setfill('0') << value << ")";
+        case RT::RegisterType::UInt16: {
+            if (valueBytesSize < 2) return "Error: Invalid payload size for UInt16";
+            uint16_t value = static_cast<uint16_t>(valueBytes[0] | (valueBytes[1] << 8));  // Little-endian
+            ss << "Value: " << value;
             break;
         }
         case RT::RegisterType::Int32: {
-            if (payload.size() < 4) return "Error: Invalid payload size for Int32";
-            int32_t value = static_cast<int32_t>(payload[0] | (payload[1] << 8) | 
-                                                (payload[2] << 16) | (payload[3] << 24));
-            ss << value;
-            ss << " (0x" << std::hex << std::setw(8) << std::setfill('0') << value << ")";
+            if (valueBytesSize < 4) return "Error: Invalid payload size for Int32";
+            int32_t value = static_cast<int32_t>(valueBytes[0] | 
+                                              (valueBytes[1] << 8) |
+                                              (valueBytes[2] << 16) |
+                                              (valueBytes[3] << 24));  // Little-endian
+            ss << "Value: " << value;
+            break;
+        }
+        case RT::RegisterType::UInt32: {
+            if (valueBytesSize < 4) return "Error: Invalid payload size for UInt32";
+            uint32_t value = static_cast<uint32_t>(valueBytes[0] |
+                                               (valueBytes[1] << 8) |
+                                               (valueBytes[2] << 16) |
+                                               (valueBytes[3] << 24));  // Little-endian
+            ss << "Value: " << value;
             break;
         }
         case RT::RegisterType::Float: {
-            if (payload.size() < 4) return "Error: Invalid payload size for Float";
-            // Reconstruct float from bytes
-            uint32_t bits = static_cast<uint32_t>(payload[0] | (payload[1] << 8) | 
-                                                 (payload[2] << 16) | (payload[3] << 24));
-            float value = *reinterpret_cast<float*>(&bits);
-            ss << std::fixed << std::setprecision(6) << value;
+            if (valueBytesSize < 4) return "Error: Invalid payload size for Float";
+            uint32_t bits = (valueBytes[0] |
+                          (valueBytes[1] << 8) |
+                          (valueBytes[2] << 16) |
+                          (valueBytes[3] << 24));  // Little-endian
+            float value = *reinterpret_cast<const float*>(&bits);
+            ss << "Value: " << std::fixed << std::setprecision(6) << value;
             break;
         }
         case RT::RegisterType::CharPtr: {
-            std::string str(payload.begin(), payload.end());
-            ss << str;
+            ss << "String: " << std::string(valueBytes, valueBytes + valueBytesSize);
             break;
         }
         default: {
             ss << "Raw data: ";
-            for (const auto& byte : payload) {
-                ss << byteToHex(byte) << " ";
+            for (size_t i = 0; i < valueBytesSize; ++i) {
+                ss << byteToHex(valueBytes[i]) << " ";
             }
             break;
         }

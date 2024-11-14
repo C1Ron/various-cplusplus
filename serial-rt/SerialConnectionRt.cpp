@@ -36,6 +36,10 @@ void SerialConnectionRt::sendFrame(const std::vector<uint8_t>& frame)
 {
     std::lock_guard<std::mutex> lock(serialMutex);
     try {
+        // Clear any pending data first
+        clearInputBuffer();
+        
+        // Then send the frame
         boost::asio::write(serial, boost::asio::buffer(frame));
     } catch (const std::exception& e) {
         throw ReadError("Error sending frame: " + std::string(e.what()));
@@ -46,48 +50,29 @@ std::vector<uint8_t> SerialConnectionRt::readFrame()
 {
     std::lock_guard<std::mutex> lock(serialMutex);
     try {
-        // Read first two bytes
-        std::vector<uint8_t> header = readWithTimeout(2);
-        if (header.size() != 2) {
+        // Read header (16 bytes)
+        std::vector<uint8_t> frame = readWithTimeout(16);
+        if (frame.size() != 16) {
             throw ReadError("Failed to read header");
         }
 
-        // Debugging
-        std::cout << "SerialConnectionRt::readFrame(): \n";
-        for (const auto& byte : header) {
-            std::cout << std::hex << std::setw(2) << std::setfill('0') 
-                      << static_cast<int>(byte) << " ";
-        }
-        std::cout << std::dec << std::endl;
-
-        // Total size is in second byte
-        size_t totalSize = header[1];
-        if (totalSize < 2) {
+        // Get total size from header
+        size_t totalSize = frame[1];
+        if (totalSize < 16) {
             throw ReadError("Invalid total size");
         }
 
-        // Read remaining bytes (totalSize - 2 since we already read 2)
-        size_t remainingBytes = totalSize - 2;
-        std::vector<uint8_t> remaining = readWithTimeout(remainingBytes);
-        if (remaining.size() != remainingBytes) {
-            throw ReadError("Failed to read complete frame");
+        // Read remaining bytes if any
+        if (totalSize > 16) {
+            size_t remainingBytes = totalSize - 16;
+            std::vector<uint8_t> remaining = readWithTimeout(remainingBytes);
+            if (remaining.size() != remainingBytes) {
+                throw ReadError("Failed to read complete frame");
+            }
+            frame.insert(frame.end(), remaining.begin(), remaining.end());
         }
 
-        // Debugging
-        std::cout << "SerialConnectionRt::readFrame(): remaining\n";
-        for (const auto& byte : remaining) {
-            std::cout << std::hex << std::setw(2) << std::setfill('0') 
-                      << static_cast<int>(byte) << " ";
-        }
-        std::cout << std::dec << std::endl;
-
-        // Combine header and remaining bytes
-        std::vector<uint8_t> complete;
-        complete.reserve(totalSize);
-        complete.insert(complete.end(), header.begin(), header.end());
-        complete.insert(complete.end(), remaining.begin(), remaining.end());
-
-        return complete;
+        return frame;
     }
     catch (const std::exception& e) {
         boost::system::error_code ec;
@@ -139,4 +124,29 @@ std::vector<uint8_t> SerialConnectionRt::readWithTimeout(size_t size)
     }
 
     return buffer;
+}
+
+void SerialConnectionRt::clearInputBuffer()
+{
+    // Read any pending data with a very short timeout
+    struct timeval shortTimeout;
+    shortTimeout.tv_sec = 0;
+    shortTimeout.tv_usec = 1000;  // 1ms
+    
+    std::vector<uint8_t> buffer(256);
+    while (true) {
+        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        FD_SET(serial.native_handle(), &read_fds);
+        
+        int result = select(serial.native_handle() + 1, &read_fds, nullptr, nullptr, &shortTimeout);
+        if (result <= 0) {
+            break;  // No more data or error
+        }
+        
+        // Read and discard data
+        boost::system::error_code ec;
+        serial.read_some(boost::asio::buffer(buffer), ec);
+        if (ec) break;
+    }
 }

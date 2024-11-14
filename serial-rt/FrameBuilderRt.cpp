@@ -9,11 +9,11 @@ std::vector<uint8_t> FrameBuilderRt::FrameData::complete()
 
 uint8_t FrameBuilderRt::FrameData::calculateCRC() const 
 {
-    uint16_t total = 0;
+    uint16_t sum = 0;
     for(size_t i = 0; i < frame.size(); i++) {
-        total += frame[i];
+        sum += frame[i];
     }
-    return static_cast<uint8_t>((total >> 8) + (total & 0x00FF));
+    return static_cast<uint8_t>((sum >> 8) + (sum & 0x00FF));
 }
 
 void FrameBuilderRt::FrameData::addPayloadBytes(const std::vector<uint8_t>& bytes) 
@@ -73,32 +73,41 @@ std::vector<uint8_t> FrameBuilderRt::valueToBytes(int32_t value, RT::RegisterTyp
             break;
             
         case RT::RegisterType::Int16:
-        case RT::RegisterType::UInt16:
+        case RT::RegisterType::UInt16: {
+            // Little-endian: LSB first
             bytes = {
-                static_cast<uint8_t>(value & 0xFF),
-                static_cast<uint8_t>((value >> 8) & 0xFF)
+                static_cast<uint8_t>(value & 0xFF),         // LSB
+                static_cast<uint8_t>((value >> 8) & 0xFF)   // MSB
             };
             break;
+        }
             
         case RT::RegisterType::Int32:
-        case RT::RegisterType::UInt32:
+        case RT::RegisterType::UInt32: {
+            // Little-endian: LSB first
             bytes = {
-                static_cast<uint8_t>(value & 0xFF),
+                static_cast<uint8_t>(value & 0xFF),           // LSB
                 static_cast<uint8_t>((value >> 8) & 0xFF),
                 static_cast<uint8_t>((value >> 16) & 0xFF),
-                static_cast<uint8_t>((value >> 24) & 0xFF)
+                static_cast<uint8_t>((value >> 24) & 0xFF)    // MSB
             };
             break;
+        }
 
         case RT::RegisterType::Float: {
-            // Interpret the int32_t bits as float
-            float float_value = *reinterpret_cast<float*>(&value);
-            uint32_t bits = *reinterpret_cast<uint32_t*>(&float_value);
+            union FloatConverter {
+                float f;
+                uint32_t i;
+            };
+            FloatConverter converter;
+            converter.f = *reinterpret_cast<float*>(&value);
+            uint32_t bits = converter.i;
+            // Little-endian: LSB first
             bytes = {
-                static_cast<uint8_t>(bits & 0xFF),
+                static_cast<uint8_t>(bits & 0xFF),           // LSB
                 static_cast<uint8_t>((bits >> 8) & 0xFF),
                 static_cast<uint8_t>((bits >> 16) & 0xFF),
-                static_cast<uint8_t>((bits >> 24) & 0xFF)
+                static_cast<uint8_t>((bits >> 24) & 0xFF)    // MSB
             };
             break;
         }
@@ -109,6 +118,7 @@ std::vector<uint8_t> FrameBuilderRt::valueToBytes(int32_t value, RT::RegisterTyp
     
     return bytes;
 }
+
 std::vector<uint8_t> FrameBuilderRt::buildReadFrame(uint8_t mscId, RT::RegisterId regId) 
 {
     FrameData frame;
@@ -156,30 +166,48 @@ std::vector<uint8_t> FrameBuilderRt::buildWriteFrame(uint8_t mscId, RT::Register
 {
     auto valueBytes = valueToBytes(value, regType);
     
+    // Set sizes based on register type
+    uint8_t payloadSize;
+    uint8_t totalSize;
+    
+    switch (regType) {
+        case RT::RegisterType::Float:
+            payloadSize = 0x06;  // regId(1) + float value(4) + CRC(1)
+            totalSize = 0x16;    // header(16) + payload(6)
+            break;
+        case RT::RegisterType::UInt16:
+            payloadSize = 0x04;  // regId(1) + uint16 value(2) + CRC(1)
+            totalSize = 0x14;    // header(16) + payload(4)
+            break;
+        // Add other cases as needed
+        default:
+            throw FrameError("Unsupported register type for write");
+    }
+    
     FrameData frame;
     
     // Header
-    frame.setStartByte(0xAA);          // Start byte
-    frame.setTotalSize(16 + 1 + valueBytes.size() + 1); // Total size including payload and CRC
-    frame.setPayloadSize(1 + valueBytes.size());        // Register ID + value bytes
-    frame.addPayloadByte(mscId);       // MSC ID
-    frame.addPayloadByte(0);           // Message request ID
-    frame.addPayloadByte(0);           // Message response ID
-    frame.addPayloadByte(0);           // Conversation ID
-    frame.addPayloadByte(0);           // Sender ID
-    frame.addPayloadByte(1);           // Number of blocks
-    frame.addPayloadByte(0);           // Sequence ID
-    frame.addPayloadByte(static_cast<uint8_t>(RT::CommandId::RT_WRITE)); // Command type
-    frame.addPayloadByte(static_cast<uint8_t>(RT::ErrorId::NO_ERROR));   // Error code
-    frame.addPayloadByte(0);           // Future use 0
-    frame.addPayloadByte(0);           // Future use 1
-    frame.addPayloadByte(0);           // Future use 2
+    frame.setStartByte(0xAA);
+    frame.setTotalSize(totalSize);
+    frame.setPayloadSize(payloadSize);
+    frame.addPayloadByte(0x00);        // MSC ID first part
+    frame.addPayloadByte(0x0a);        // Message request ID
+    frame.addPayloadByte(0x00);        // Message response ID
+    frame.addPayloadByte(0x63);        // Conversation ID
+    frame.addPayloadByte(0x01);        // Sender ID
+    frame.addPayloadByte(0x01);        // Number of blocks
+    frame.addPayloadByte(0x01);        // Sequence ID
+    frame.addPayloadByte(static_cast<uint8_t>(RT::CommandId::RT_WRITE));
+    frame.addPayloadByte(static_cast<uint8_t>(RT::ErrorId::NO_ERROR));
+    frame.addPayloadByte(0x00);        // Future use 0
+    frame.addPayloadByte(0x00);        // Future use 1
+    frame.addPayloadByte(0x00);        // Future use 2
     frame.addPayloadByte(0xAA);        // End byte
     
     // Payload
     frame.addPayloadByte(static_cast<uint8_t>(regId));
     frame.addPayloadBytes(valueBytes);
-    
+
     return frame.complete();
 }
 
@@ -207,18 +235,24 @@ std::vector<uint8_t> FrameBuilderRt::buildExecuteFrame(uint8_t mscId, RT::Execut
     
     // Payload
     frame.addPayloadByte(static_cast<uint8_t>(execId));
-    
-    return frame.complete();
+    auto result = frame.complete();
+    std::cout << "FrameBuilder::buildExecuteFrame()" << std::endl;
+    for (auto byte : result) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+    }
+    std::cout << std::dec << std::endl;
+
+    return result;
 }
 
-std::vector<uint8_t> FrameBuilderRt::buildRampFrame(uint8_t mscId, int32_t finalSpeed, uint16_t duration) 
+std::vector<uint8_t> FrameBuilderRt::buildFocFrame(uint8_t mscId, ST_MPC::RegisterId regId) 
 {
     FrameData frame;
     
     // Header
     frame.setStartByte(0xAA);          // Start byte
-    frame.setTotalSize(16 + 6 + 1);    // Total size including payload and CRC
-    frame.setPayloadSize(6);           // 4 bytes speed + 2 bytes duration
+    frame.setTotalSize(16 + 1 + 1);    // Total size including payload and CRC
+    frame.setPayloadSize(1);           // FOC command ID
     frame.addPayloadByte(mscId);       // MSC ID
     frame.addPayloadByte(0);           // Message request ID
     frame.addPayloadByte(0);           // Message response ID
@@ -226,22 +260,21 @@ std::vector<uint8_t> FrameBuilderRt::buildRampFrame(uint8_t mscId, int32_t final
     frame.addPayloadByte(0);           // Sender ID
     frame.addPayloadByte(1);           // Number of blocks
     frame.addPayloadByte(0);           // Sequence ID
-    frame.addPayloadByte(static_cast<uint8_t>(RT::CommandId::RT_EXECUTE)); // Command type
+    frame.addPayloadByte(static_cast<uint8_t>(RT::CommandId::FOC_COMMAND)); // Command type
     frame.addPayloadByte(static_cast<uint8_t>(RT::ErrorId::NO_ERROR));     // Error code
     frame.addPayloadByte(0);           // Future use 0
     frame.addPayloadByte(0);           // Future use 1
     frame.addPayloadByte(0);           // Future use 2
     frame.addPayloadByte(0xAA);        // End byte
     
-    // Payload - Final speed (4 bytes, little-endian)
-    frame.addPayloadByte(static_cast<uint8_t>(finalSpeed & 0xFF));
-    frame.addPayloadByte(static_cast<uint8_t>((finalSpeed >> 8) & 0xFF));
-    frame.addPayloadByte(static_cast<uint8_t>((finalSpeed >> 16) & 0xFF));
-    frame.addPayloadByte(static_cast<uint8_t>((finalSpeed >> 24) & 0xFF));
-    
-    // Payload - Duration (2 bytes, little-endian)
-    frame.addPayloadByte(static_cast<uint8_t>(duration & 0xFF));
-    frame.addPayloadByte(static_cast<uint8_t>((duration >> 8) & 0xFF));
-    
-    return frame.complete();
+    // Payload
+    frame.addPayloadByte(static_cast<uint8_t>(regId));
+    auto result = frame.complete();
+    std::cout << "FrameBuilder::buildFocFrame()" << std::endl;
+    for (auto byte : result) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+    }
+    std::cout << std::dec << std::endl;
+
+    return result;
 }

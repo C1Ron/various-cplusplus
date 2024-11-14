@@ -10,7 +10,9 @@ CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId)
         {"read", std::bind(&CommandHandlerRt::handleRead, this, std::placeholders::_1)},
         {"write", std::bind(&CommandHandlerRt::handleWrite, this, std::placeholders::_1)},
         {"exec", std::bind(&CommandHandlerRt::handleExecute, this, std::placeholders::_1)},
-        {"ramp", std::bind(&CommandHandlerRt::handleRamp, this, std::placeholders::_1)},
+        {"foc-read", std::bind(&CommandHandlerRt::handleFoc, this, std::placeholders::_1)},
+        {"foc-write", std::bind(&CommandHandlerRt::handleFoc, this, std::placeholders::_1)},
+        {"foc-exec", std::bind(&CommandHandlerRt::handleFoc, this, std::placeholders::_1)},
         {"log-start", std::bind(&CommandHandlerRt::handleLogStart, this, std::placeholders::_1)},
         {"log-stop", std::bind(&CommandHandlerRt::handleLogStop, this, std::placeholders::_1)},
         {"log-add", std::bind(&CommandHandlerRt::handleLogAdd, this, std::placeholders::_1)},
@@ -40,6 +42,81 @@ CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId)
         {"ramp", RT::ExecuteId::RAMP_EXECUTE},
         {"feedback-start", RT::ExecuteId::START_FEEDBACK},
         {"feedback-stop", RT::ExecuteId::STOP_FEEDBACK}
+    };
+
+    // Initialize FOC register map
+    focRegisterMap = {
+        {"motor-id", {ST_MPC::RegisterId::TargetMotor, ST_MPC::RegisterType::UInt8}},
+        {"flags", {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
+        {"status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
+        {"control-mode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
+        {"speed-ref", {ST_MPC::RegisterId::SpeedRef, ST_MPC::RegisterType::Int32}},
+        {"speed-Kp", {ST_MPC::RegisterId::SpeedKp, ST_MPC::RegisterType::UInt16}},
+        {"speed-Ki", {ST_MPC::RegisterId::SpeedKi, ST_MPC::RegisterType::UInt16}},
+        {"speed-Kd", {ST_MPC::RegisterId::SpeedKd, ST_MPC::RegisterType::UInt16}},
+        {"torque-ref", {ST_MPC::RegisterId::TorqueRef, ST_MPC::RegisterType::Int16}},
+        {"torque-Kp", {ST_MPC::RegisterId::TorqueKp, ST_MPC::RegisterType::UInt16}},
+        {"torque-Ki", {ST_MPC::RegisterId::TorqueKi, ST_MPC::RegisterType::UInt16}},
+        {"torque-Kd", {ST_MPC::RegisterId::TorqueKd, ST_MPC::RegisterType::UInt16}},
+        {"flux-ref", {ST_MPC::RegisterId::FluxRef, ST_MPC::RegisterType::Int16}},
+        {"flux-Kp", {ST_MPC::RegisterId::FluxKp, ST_MPC::RegisterType::UInt16}},
+        {"flux-Ki", {ST_MPC::RegisterId::FluxKi, ST_MPC::RegisterType::UInt16}},
+        {"flux-Kd", {ST_MPC::RegisterId::FluxKd, ST_MPC::RegisterType::UInt16}},
+        {"status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
+        {"flags",  {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
+        {"control-mode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
+        {"motor-power", {ST_MPC::RegisterId::MotorPower, ST_MPC::RegisterType::UInt16}},
+        {"speed-meas", {ST_MPC::RegisterId::SpeedMeas, ST_MPC::RegisterType::Int32}},
+        {"torque-meas", {ST_MPC::RegisterId::TorqueMeas, ST_MPC::RegisterType::Int16}},
+        {"flux-meas", {ST_MPC::RegisterId::FluxMeas, ST_MPC::RegisterType::Int16}},
+        {"Ia", {ST_MPC::RegisterId::Ia, ST_MPC::RegisterType::Int16}},
+        {"Ib", {ST_MPC::RegisterId::Ib, ST_MPC::RegisterType::Int16}},
+        {"Ialpha", {ST_MPC::RegisterId::Ialpha, ST_MPC::RegisterType::Int16}},
+        {"Ibeta", {ST_MPC::RegisterId::Ibeta, ST_MPC::RegisterType::Int16}},
+        {"Iq", {ST_MPC::RegisterId::Iq, ST_MPC::RegisterType::Int16}},
+        {"Id", {ST_MPC::RegisterId::Id, ST_MPC::RegisterType::Int16}},
+        {"Iq-ref", {ST_MPC::RegisterId::IqRef, ST_MPC::RegisterType::Int16}},
+        {"Id-ref", {ST_MPC::RegisterId::IdRef, ST_MPC::RegisterType::Int16}},
+        {"Vq", {ST_MPC::RegisterId::Vq, ST_MPC::RegisterType::Int16}},
+        {"Vd", {ST_MPC::RegisterId::Vd, ST_MPC::RegisterType::Int16}},
+        {"Valpha", {ST_MPC::RegisterId::Valpha, ST_MPC::RegisterType::Int16}},
+        {"Vbeta", {ST_MPC::RegisterId::Vbeta, ST_MPC::RegisterType::Int16}},
+        {"el-angle-meas", {ST_MPC::RegisterId::ElAngleMeas, ST_MPC::RegisterType::Int16}},
+        {"ramp-final-speed", {ST_MPC::RegisterId::RampFinalSpeed, ST_MPC::RegisterType::Int32}},
+        {"ramp-duration", {ST_MPC::RegisterId::RampDuration, ST_MPC::RegisterType::UInt16}},
+        {"speed-Kp-div", {ST_MPC::RegisterId::SpeedKpDiv, ST_MPC::RegisterType::UInt16}},
+        {"speed-Ki-div", {ST_MPC::RegisterId::SpeedKiDiv, ST_MPC::RegisterType::UInt16}},
+        {"trans-det-1000", {ST_MPC::RegisterId::TransDetReg1000, ST_MPC::RegisterType::UInt8}},
+        {"trans-det-1200", {ST_MPC::RegisterId::TransDetReg1200, ST_MPC::RegisterType::UInt8}},
+        {"trans-det-1300", {ST_MPC::RegisterId::TransDetReg1300, ST_MPC::RegisterType::UInt8}},
+        {"trans-det-Id", {ST_MPC::RegisterId::TransDetRegId, ST_MPC::RegisterType::UInt8}},
+        {"dead-time-Id", {ST_MPC::RegisterId::DeadTimeRegId, ST_MPC::RegisterType::UInt8}},
+        {"dead-time-A", {ST_MPC::RegisterId::DeadTimeRegA, ST_MPC::RegisterType::UInt8}},
+        {"dead-time-B", {ST_MPC::RegisterId::DeadTimeRegB, ST_MPC::RegisterType::UInt8}},
+        {"gdr-pwr-dis", {ST_MPC::RegisterId::GdrPwrDis, ST_MPC::RegisterType::UInt8}},
+        {"gdr-pwm-en", {ST_MPC::RegisterId::GdrPwmEn, ST_MPC::RegisterType::UInt8}},
+        {"gdr-flt-A", {ST_MPC::RegisterId::GdrFltPhA, ST_MPC::RegisterType::UInt8}},
+        {"gdr-flt-B", {ST_MPC::RegisterId::GdrFltPhB, ST_MPC::RegisterType::UInt8}},
+        {"gdr-flt-C", {ST_MPC::RegisterId::GdrFltPhC, ST_MPC::RegisterType::UInt8}},
+        {"gdr-temp-A", {ST_MPC::RegisterId::GdrTempPhA, ST_MPC::RegisterType::UInt32}},
+        {"gdr-temp-B", {ST_MPC::RegisterId::GdrTempPhB, ST_MPC::RegisterType::UInt32}},
+        {"gdr-temp-C", {ST_MPC::RegisterId::GdrTempPhC, ST_MPC::RegisterType::UInt32}},
+        {"mux-Id", {ST_MPC::RegisterId::MuxRegId, ST_MPC::RegisterType::UInt8}},
+        {"torque-Kp-div-pow2", {ST_MPC::RegisterId::TorqueKpDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"torque-Ki-div-pow2", {ST_MPC::RegisterId::TorqueKiDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"flux-Kp-div-pow2", {ST_MPC::RegisterId::FluxKpDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"flux-Ki-div-pow2", {ST_MPC::RegisterId::FluxKiDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"speed-Kp-div-pow2", {ST_MPC::RegisterId::SpeedKpDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"speed-Ki-div-pow2", {ST_MPC::RegisterId::SpeedKiDivPow2, ST_MPC::RegisterType::UInt16}},
+        {"torque-Kp-div", {ST_MPC::RegisterId::TorqueKpDiv, ST_MPC::RegisterType::UInt16}},
+        {"torque-Ki-div", {ST_MPC::RegisterId::TorqueKiDiv, ST_MPC::RegisterType::UInt16}},
+        {"flux-Kp-div", {ST_MPC::RegisterId::FluxKpDiv, ST_MPC::RegisterType::UInt16}},
+        {"flux-Ki-div", {ST_MPC::RegisterId::FluxKiDiv, ST_MPC::RegisterType::UInt16}},
+        {"align-final-flux", {ST_MPC::RegisterId::AlignFinalFlux, ST_MPC::RegisterType::UInt16}},
+        {"align-ramp-up-duration", {ST_MPC::RegisterId::AlignRampUpDuration, ST_MPC::RegisterType::UInt16}},
+        {"align-ramp-down-duration", {ST_MPC::RegisterId::AlignRampDownDuration, ST_MPC::RegisterType::UInt16}},
+        {"is-aligned", {ST_MPC::RegisterId::IsAligned, ST_MPC::RegisterType::UInt16}},
+        {"git-version", {ST_MPC::RegisterId::GitVersion, ST_MPC::RegisterType::CharPtr}}
     };
 }
 
@@ -129,52 +206,72 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleWrite(const std::string&
 CommandHandlerRt::CommandResult CommandHandlerRt::handleExecute(const std::string& args) 
 {
     std::istringstream iss(args);
-    std::string execName;
-    iss >> execName;
-
-    if (execName.empty()) {
-        return {false, "Execute command name required"};
-    }
-
-    auto it = executeMap.find(execName);
-    if (it == executeMap.end()) {
-        return {false, "Unknown execute command: " + execName};
-    }
+    std::string cmd;
+    iss >> cmd;
 
     try {
-        auto frame = frameBuilder.buildExecuteFrame(mscId, it->second);
-        std::string response = sendAndProcessResponse(frame);
-        return {true, response};
+        if (cmd == "ramp") {
+            // Parse ramp parameters
+            int32_t finalSpeed;
+            uint16_t duration;
+            iss >> finalSpeed >> duration;
+            
+            if (iss.fail()) {
+                return {false, "Usage: exec ramp <final-speed> <duration>"};
+            }
+
+            // 1. Set ramp final speed
+            auto speedFrame = frameBuilder.buildWriteFrame(mscId, RT::RegisterId::RAMP_FINAL_SPEED, 
+                                                         finalSpeed, RT::RegisterType::Float);
+            auto speedResponse = sendAndProcessResponse(speedFrame);
+            
+            // 2. Set ramp duration
+            auto durationFrame = frameBuilder.buildWriteFrame(mscId, RT::RegisterId::RAMP_DURATION, 
+                                                            duration, RT::RegisterType::UInt16);
+            auto durationResponse = sendAndProcessResponse(durationFrame);
+            
+            // 3. Execute ramp command
+            auto execFrame = frameBuilder.buildExecuteFrame(mscId, RT::ExecuteId::RAMP_EXECUTE);
+            auto execResponse = sendAndProcessResponse(execFrame);
+            
+            return {true, "Ramp command executed successfully"};
+        }
+        else {
+            // Handle other execute commands (start, stop, etc.)
+            auto it = executeMap.find(cmd);
+            if (it == executeMap.end()) {
+                return {false, "Unknown execute command: " + cmd};
+            }
+
+            auto frame = frameBuilder.buildExecuteFrame(mscId, it->second);
+            std::string response = sendAndProcessResponse(frame);
+            return {true, response};
+        }
     }
     catch (const std::exception& e) {
         return handleError("Execute failed", e);
     }
 }
 
-CommandHandlerRt::CommandResult CommandHandlerRt::handleRamp(const std::string& args) 
+CommandHandlerRt::CommandResult CommandHandlerRt::handleFoc(const std::string& args) 
 {
     std::istringstream iss(args);
-    std::string speedStr, timeStr;
-    
-    iss >> speedStr >> timeStr;
-    
-    if (speedStr.empty() || timeStr.empty()) {
-        return {false, "Speed and time required"};
+    std::string cmd;
+    iss >> cmd;
+
+    auto it = focRegisterMap.find(cmd);
+    if (it == focRegisterMap.end()) {
+        return {false, "Unknown FOC register: " + cmd};
     }
 
     try {
-        int32_t speed;
-        uint16_t time;
-        
-        std::istringstream(speedStr) >> speed;
-        std::istringstream(timeStr) >> time;
-
-        auto frame = frameBuilder.buildRampFrame(mscId, speed, time);
-        std::string response = sendAndProcessResponse(frame);
+        const auto& reg = it->second;
+        auto frame = frameBuilder.buildFocFrame(mscId, reg.id);
+        std::string response = sendAndProcessResponse(frame, reg.type);
         return {true, response};
     }
     catch (const std::exception& e) {
-        return handleError("Ramp failed", e);
+        return handleError("FOC read failed", e);
     }
 }
 
@@ -330,6 +427,14 @@ std::string CommandHandlerRt::sendAndProcessResponse(const std::vector<uint8_t>&
 
 std::string CommandHandlerRt::sendAndProcessResponse(const std::vector<uint8_t>& frame, 
                                                    RT::RegisterType type) 
+{
+    connection.sendFrame(frame);
+    auto response = connection.readFrame();
+    return frameInterpreter.interpretResponse(response, type);
+}
+
+std::string CommandHandlerRt::sendAndProcessResponse(const std::vector<uint8_t>& frame, 
+                                                   ST_MPC::RegisterType type) 
 {
     connection.sendFrame(frame);
     auto response = connection.readFrame();
