@@ -179,8 +179,9 @@ int32_t LoggerRt::extractRtValue(const std::vector<uint8_t>& response, RT::Regis
             if (response.size() < 20) {
                 throw std::runtime_error("Invalid response size for float");
             }
-            uint32_t bits = static_cast<uint32_t>(response[16] | (response[17] << 8) |
-                                                 (response[18] << 16) | (response[19] << 24));
+            // Skip register ID byte (response[16]) and start from response[17]
+            uint32_t bits = static_cast<uint32_t>(response[17] | (response[18] << 8) |
+                                                (response[19] << 16) | (response[20] << 24));
             float value = *reinterpret_cast<float*>(&bits);
             return static_cast<int32_t>(value * 1000.0f);
         }

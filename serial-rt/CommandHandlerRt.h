@@ -80,6 +80,10 @@ private:
     std::unordered_map<std::string, RT::ExecuteId> executeMap;
     std::unordered_map<std::string, FocRegister> focRegisterMap;
     std::unordered_map<std::string, ST_MPC::ExecuteId> focExecuteMap;
+
+    pid_t plotterPid{0};  // PID of plotter process
+    void startPlot();
+    void stopPlot();
 };
 
 #endif // COMMAND_HANDLER_RT_H

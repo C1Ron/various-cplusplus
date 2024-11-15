@@ -27,7 +27,7 @@ CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId)
     registerMap = {
         {"ramp-final-speed", {RT::RegisterId::RAMP_FINAL_SPEED, RT::RegisterType::Int32}},
         {"ramp-duration", {RT::RegisterId::RAMP_DURATION, RT::RegisterType::UInt16}},
-        {"speed-setpoint", {RT::RegisterId::SPEED_SETPOINT, RT::RegisterType::Int32}},
+        {"speed-setpoint", {RT::RegisterId::SPEED_SETPOINT, RT::RegisterType::Float}},
         {"speed-Kp", {RT::RegisterId::SPEED_KP, RT::RegisterType::Float}},
         {"speed-Ki", {RT::RegisterId::SPEED_KI, RT::RegisterType::Float}},
         {"speed-Kd", {RT::RegisterId::SPEED_KD, RT::RegisterType::Float}},
@@ -361,6 +361,7 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleLogStart(const std::stri
     
     try {
         logger->start();
+        startPlot();
         return {true, "Logging started"};
     }
     catch (const std::exception& e) {
@@ -375,6 +376,7 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleLogStop(const std::strin
     }
     
     try {
+        stopPlot();
         logger->stop();
         return {true, "Logging stopped"};
     }
@@ -625,4 +627,27 @@ const std::string CommandHandlerRt::printAllFocExecutes() const
         ss << "  " << exec.first << "\n";
     }
     return ss.str();
+}
+
+void CommandHandlerRt::startPlot()
+{
+    pid_t pid = fork();
+    if (pid == 0) {
+        LoggerRt::LogConfig config = logger->getConfig();
+        execlp("python3", "python3", "plot.py", config.filename.c_str(), nullptr);
+        std::cerr << "Failed to start plotter process" << std::endl;
+    } else if (pid > 0) {
+        std::cout << "Plotter process started with PID " << pid << std::endl;
+        plotterPid = pid;
+    } else {
+        std::cerr << "Failed to fork plotter process" << std::endl;
+    }
+}
+
+void CommandHandlerRt::stopPlot()
+{
+    if (plotterPid > 0) {
+        kill(plotterPid, SIGTERM);
+        plotterPid = 0;
+    }
 }
