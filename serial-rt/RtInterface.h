@@ -34,6 +34,8 @@ private:
     static LoggerRt::LogConfig createLogConfig();
     static void printRegisters(const CommandHandlerRt& handler);
     static void printExecutes(const CommandHandlerRt& handler);
+    static void printFocRegisters(const CommandHandlerRt& handler);
+    static void printFocExecutes(const CommandHandlerRt& handler);
 };
 
 #endif // RT_INTERFACE_H

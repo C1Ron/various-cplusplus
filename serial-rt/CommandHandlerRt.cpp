@@ -10,13 +10,15 @@ CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId)
         {"read", std::bind(&CommandHandlerRt::handleRead, this, std::placeholders::_1)},
         {"write", std::bind(&CommandHandlerRt::handleWrite, this, std::placeholders::_1)},
         {"exec", std::bind(&CommandHandlerRt::handleExecute, this, std::placeholders::_1)},
-        {"foc-read", std::bind(&CommandHandlerRt::handleFoc, this, std::placeholders::_1)},
-        {"foc-write", std::bind(&CommandHandlerRt::handleFoc, this, std::placeholders::_1)},
-        {"foc-exec", std::bind(&CommandHandlerRt::handleFoc, this, std::placeholders::_1)},
+        {"foc-read", std::bind(&CommandHandlerRt::handleFocRead, this, std::placeholders::_1)},
+        {"foc-write", std::bind(&CommandHandlerRt::handleFocWrite, this, std::placeholders::_1)},
+        {"foc-exec", std::bind(&CommandHandlerRt::handleFocExecute, this, std::placeholders::_1)},
         {"log-start", std::bind(&CommandHandlerRt::handleLogStart, this, std::placeholders::_1)},
         {"log-stop", std::bind(&CommandHandlerRt::handleLogStop, this, std::placeholders::_1)},
-        {"log-add", std::bind(&CommandHandlerRt::handleLogAdd, this, std::placeholders::_1)},
-        {"log-remove", std::bind(&CommandHandlerRt::handleLogRemove, this, std::placeholders::_1)},
+        {"log-add-rt", std::bind(&CommandHandlerRt::handleLogAddRt, this, std::placeholders::_1)},
+        {"log-remove-rt", std::bind(&CommandHandlerRt::handleLogRemoveRt, this, std::placeholders::_1)},
+        {"log-add-foc", std::bind(&CommandHandlerRt::handleLogAddFoc, this, std::placeholders::_1)},
+        {"log-remove-foc", std::bind(&CommandHandlerRt::handleLogRemoveFoc, this, std::placeholders::_1)},
         {"log-status", std::bind(&CommandHandlerRt::handleLogStatus, this, std::placeholders::_1)},
         {"log-config", std::bind(&CommandHandlerRt::handleLogConfig, this, std::placeholders::_1)}
     };
@@ -26,9 +28,9 @@ CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId)
         {"ramp-final-speed", {RT::RegisterId::RAMP_FINAL_SPEED, RT::RegisterType::Int32}},
         {"ramp-duration", {RT::RegisterId::RAMP_DURATION, RT::RegisterType::UInt16}},
         {"speed-setpoint", {RT::RegisterId::SPEED_SETPOINT, RT::RegisterType::Int32}},
-        {"speed-kp", {RT::RegisterId::SPEED_KP, RT::RegisterType::Float}},
-        {"speed-ki", {RT::RegisterId::SPEED_KI, RT::RegisterType::Float}},
-        {"speed-kd", {RT::RegisterId::SPEED_KD, RT::RegisterType::Float}},
+        {"speed-Kp", {RT::RegisterId::SPEED_KP, RT::RegisterType::Float}},
+        {"speed-Ki", {RT::RegisterId::SPEED_KI, RT::RegisterType::Float}},
+        {"speed-Kd", {RT::RegisterId::SPEED_KD, RT::RegisterType::Float}},
         {"board-info", {RT::RegisterId::BOARD_INFO, RT::RegisterType::CharPtr}},
         {"current-speed", {RT::RegisterId::CURRENT_SPEED, RT::RegisterType::Float}},
         {"speed-loop-period", {RT::RegisterId::SPEED_LOOP_PERIOD_MS, RT::RegisterType::UInt32}},
@@ -113,11 +115,23 @@ CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId)
         {"flux-Kp-div", {ST_MPC::RegisterId::FluxKpDiv, ST_MPC::RegisterType::UInt16}},
         {"flux-Ki-div", {ST_MPC::RegisterId::FluxKiDiv, ST_MPC::RegisterType::UInt16}},
         {"align-final-flux", {ST_MPC::RegisterId::AlignFinalFlux, ST_MPC::RegisterType::UInt16}},
-        {"align-ramp-up-duration", {ST_MPC::RegisterId::AlignRampUpDuration, ST_MPC::RegisterType::UInt16}},
-        {"align-ramp-down-duration", {ST_MPC::RegisterId::AlignRampDownDuration, ST_MPC::RegisterType::UInt16}},
+        {"align-ramp-up", {ST_MPC::RegisterId::AlignRampUpDuration, ST_MPC::RegisterType::UInt16}},
+        {"align-ramp-down", {ST_MPC::RegisterId::AlignRampDownDuration, ST_MPC::RegisterType::UInt16}},
         {"is-aligned", {ST_MPC::RegisterId::IsAligned, ST_MPC::RegisterType::UInt16}},
         {"git-version", {ST_MPC::RegisterId::GitVersion, ST_MPC::RegisterType::CharPtr}}
     };
+
+    focExecuteMap = {   
+        {"start", {ST_MPC::ExecuteId::StartMotor}}, 
+        {"stop", {ST_MPC::ExecuteId::StopMotor}}, 
+        {"stop-ramp", {ST_MPC::ExecuteId::StopRamp}},
+        {"reset", {ST_MPC::ExecuteId::Reset}},
+        {"ping", {ST_MPC::ExecuteId::Ping}},
+        {"encoder-align", {ST_MPC::ExecuteId::EncoderAlign}},
+        {"start-stop", {ST_MPC::ExecuteId::StartStop}},
+        {"fault-ack", {ST_MPC::ExecuteId::FaultAck}} 
+    };
+    
 }
 
 CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId, LoggerRt& logger)
@@ -256,17 +270,37 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleExecute(const std::strin
 CommandHandlerRt::CommandResult CommandHandlerRt::handleFoc(const std::string& args) 
 {
     std::istringstream iss(args);
-    std::string cmd;
-    iss >> cmd;
+    std::string cmdType;
+    iss >> cmdType;
 
-    auto it = focRegisterMap.find(cmd);
+    if (cmdType == "foc-read") {
+        std::cout << "CommandHandlerRt::handleFoc() - foc-read \n\targs: " << args << std::endl;
+        return handleFocRead(args);
+    } 
+    else if (cmdType == "foc-write") {
+        std::cout << "CommandHandlerRt::handleFoc() - foc-write \n\targs: " << args << std::endl;
+        return handleFocWrite(args);
+    }
+    else if (cmdType == "foc-exec") {
+        std::cout << "CommandHandlerRt::handleFoc() - foc-exec \n\targs: " << args << std::endl;
+        return handleFocExecute(args);
+    }
+    return {false, "Unknown FOC command type: " + cmdType};
+}
+
+CommandHandlerRt::CommandResult CommandHandlerRt::handleFocRead(const std::string& args) 
+{
+    std::istringstream iss(args);
+    std::string regName;
+    iss >> regName;
+    auto it = focRegisterMap.find(regName);
     if (it == focRegisterMap.end()) {
-        return {false, "Unknown FOC register: " + cmd};
+        return {false, "Unknown FOC register: " + regName};
     }
 
     try {
         const auto& reg = it->second;
-        auto frame = frameBuilder.buildFocFrame(mscId, reg.id);
+        auto frame = frameBuilder.buildFocReadFrame(mscId, reg.id);
         std::string response = sendAndProcessResponse(frame, reg.type);
         return {true, response};
     }
@@ -275,6 +309,49 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleFoc(const std::string& a
     }
 }
 
+CommandHandlerRt::CommandResult CommandHandlerRt::handleFocWrite(const std::string& args) 
+{
+    std::istringstream iss(args);
+    std::string regName, valueStr;
+    iss >> regName >> valueStr;  // Skip "foc-write" command
+
+    auto it = focRegisterMap.find(regName);
+    if (it == focRegisterMap.end()) {
+        return {false, "Unknown FOC register: " + regName};
+    }
+
+    try {
+        const auto& reg = it->second;
+        int32_t value;
+        std::istringstream(valueStr) >> value;
+
+        auto frame = frameBuilder.buildFocWriteFrame(mscId, reg.id, value, reg.type);
+        std::string response = sendAndProcessResponse(frame, reg.type);
+        return {true, response};
+    }
+    catch (const std::exception& e) {
+        return handleError("FOC write failed", e);
+    }
+}
+
+CommandHandlerRt::CommandResult CommandHandlerRt::handleFocExecute(const std::string& args) 
+{
+    std::istringstream iss(args);
+    std::string execName;
+    iss >> execName; 
+    auto it = focExecuteMap.find(execName);
+    if (it == focExecuteMap.end()) {
+        return {false, "Unknown FOC execute command: " + execName};
+    }
+    try {
+        auto frame = frameBuilder.buildFocExecuteFrame(mscId, it->second);
+        std::string response = sendAndProcessResponse(frame);
+        return {true, response};
+    }
+    catch (const std::exception& e) {
+        return handleError("FOC execute failed", e);
+    }
+}
 // Logging related command handlers
 CommandHandlerRt::CommandResult CommandHandlerRt::handleLogStart(const std::string&) 
 {
@@ -306,7 +383,7 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleLogStop(const std::strin
     }
 }
 
-CommandHandlerRt::CommandResult CommandHandlerRt::handleLogAdd(const std::string& args) 
+CommandHandlerRt::CommandResult CommandHandlerRt::handleLogAddRt(const std::string& args) 
 {
     if (!logger) {
         return {false, "Logger not initialized"};
@@ -322,7 +399,7 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleLogAdd(const std::string
 
     try {
         const auto& reg = getRegister(regName);
-        if (logger->addRegister(regName, reg.id, reg.type)) {
+        if (logger->addRtRegister(regName, reg.id, reg.type)) {
             return {true, "Register added to logging: " + regName};
         }
         return {false, "Register already being logged: " + regName};
@@ -332,7 +409,7 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleLogAdd(const std::string
     }
 }
 
-CommandHandlerRt::CommandResult CommandHandlerRt::handleLogRemove(const std::string& args) 
+CommandHandlerRt::CommandResult CommandHandlerRt::handleLogRemoveRt(const std::string& args) 
 {
     if (!logger) {
         return {false, "Logger not initialized"};
@@ -346,7 +423,7 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleLogRemove(const std::str
         return {false, "Register name required"};
     }
 
-    if (logger->removeRegister(regName)) {
+    if (logger->removeRtRegister(regName)) {
         return {true, "Register removed from logging: " + regName};
     }
     return {false, "Register not found in logging: " + regName};
@@ -373,6 +450,56 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleLogStatus(const std::str
     }
 
     return {true, ss.str()};
+}
+
+CommandHandlerRt::CommandResult CommandHandlerRt::handleLogAddFoc(const std::string& args)
+{
+    if (!logger) {
+        return {false, "Logger not initialized"};
+    }
+
+    std::istringstream iss(args);
+    std::string regName;
+    iss >> regName;
+
+    if (regName.empty()) {
+        return {false, "Register name required"};
+    }
+
+    try {
+        const auto& reg = focRegisterMap.find(regName);
+        if (reg == focRegisterMap.end()) {
+            return {false, "Unknown FOC register: " + regName};
+        }
+
+        if (logger->addFocRegister(regName, reg->second.id, reg->second.type)) {
+            return {true, "FOC register added to logging: " + regName};
+        }
+        return {false, "FOC register already being logged: " + regName};
+    }
+    catch (const std::exception& e) {
+        return handleError("Failed to add FOC register to logging", e);
+    }
+}
+
+CommandHandlerRt::CommandResult CommandHandlerRt::handleLogRemoveFoc(const std::string& args)
+{
+    if (!logger) {
+        return {false, "Logger not initialized"};
+    }
+
+    std::istringstream iss(args);
+    std::string regName;
+    iss >> regName;
+
+    if (regName.empty()) {
+        return {false, "Register name required"};
+    }
+
+    if (logger->removeFocRegister(regName)) {
+        return {true, "FOC register removed from logging: " + regName};
+    }
+    return {false, "FOC register not found in logging: " + regName};
 }
 
 CommandHandlerRt::CommandResult CommandHandlerRt::handleLogConfig(const std::string& args) 
@@ -466,6 +593,35 @@ const std::string CommandHandlerRt::printAllExecutes() const
     std::stringstream ss;
     ss << "Available execute commands:\n";
     for (const auto& exec : executeMap) {
+        ss << "  " << exec.first << "\n";
+    }
+    return ss.str();
+}
+
+const std::string CommandHandlerRt::printAllFocRegisters() const
+{
+    std::stringstream ss;
+    ss << "Available registers:\n";
+    for (const auto& reg : focRegisterMap) {
+        ss << "  " << std::setw(20) << std::left << reg.first;
+        switch (reg.second.type) {
+            case ST_MPC::RegisterType::UInt8: ss << "UINT8"; break;
+            case ST_MPC::RegisterType::Int16: ss << "INT16"; break;
+            case ST_MPC::RegisterType::UInt16: ss << "UINT16"; break;
+            case ST_MPC::RegisterType::Int32: ss << "INT32"; break;
+            case ST_MPC::RegisterType::UInt32: ss << "UINT32"; break;
+            case ST_MPC::RegisterType::CharPtr: ss << "STRING"; break;
+        }
+        ss << "\n";
+    }
+    return ss.str();
+}
+
+const std::string CommandHandlerRt::printAllFocExecutes() const
+{
+    std::stringstream ss;
+    ss << "Available FOC execute commands:\n";
+    for (const auto& exec : focExecuteMap) {
         ss << "  " << exec.first << "\n";
     }
     return ss.str();

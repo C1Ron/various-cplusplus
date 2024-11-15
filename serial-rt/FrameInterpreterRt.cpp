@@ -1,4 +1,3 @@
-// FrameInterpreterRt.cpp
 #include "FrameInterpreterRt.h"
 #include <sstream>
 #include <iomanip>
@@ -18,7 +17,7 @@ std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& re
         return "Error: Invalid response size";
     }
 
-    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY )) {
+    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
         // RT_WRITE_REPLY has a bug
         return "Success: Write command executed";
     }
@@ -58,7 +57,6 @@ std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& re
     }
 
     if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
-        // RT_WRITE_REPLY has a bug
         return "Success: Write command executed";
     }
 
@@ -82,7 +80,6 @@ std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& re
     }
 
     if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
-        // RT_WRITE_REPLY has a bug
         return "Success: Write command executed";
     }
 
@@ -93,7 +90,7 @@ std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& re
     }
 
     if (info.header.commandType == static_cast<uint8_t>(RT::CommandId::FOC_COMMAND_REPLY)) {
-        return handleFocCommand(info);
+        return handleFocCommand(info, type);
     }
 
     return interpretResponse(response);
@@ -177,16 +174,30 @@ bool FrameInterpreterRt::validateWriteReplyCRC(const std::vector<uint8_t>& frame
     return validateCRC(modifiedFrame);
 }
 
+bool FrameInterpreterRt::validateFocCRC(const std::vector<uint8_t>& focFrame) const 
+{
+    if (focFrame.size() < 2) return false;
+    
+    uint16_t sum = 0;
+    for (size_t i = 0; i < focFrame.size() - 1; ++i) {
+        sum += focFrame[i];
+    }
+    
+    uint8_t calculated_crc = static_cast<uint8_t>((sum & 0xFF) + (sum >> 8));
+    return calculated_crc == focFrame.back();
+}
+
 std::string FrameInterpreterRt::handleRtRead(const ResponseInfo& info, RT::RegisterType type) 
 {
     if (info.payload.empty()) {
         return "Error: Empty read response";
     }
-
+    /*
     for (const auto& byte : info.payload) {
         std::cout << byteToHex(byte) << " ";
     }
     std::cout << std::endl;
+    */
     return "Success: " + formatValue(info.payload, type);
 }
 
@@ -203,20 +214,84 @@ std::string FrameInterpreterRt::handleRtExecute(const ResponseInfo& info)
 
 std::string FrameInterpreterRt::handleFocCommand(const ResponseInfo& info) 
 {
-    if (info.payload.size() < 2) {
-        return "Error: Invalid FOC response payload";
+    if (info.payload.size() < 2) {  // Minimum: mscId + errorCode
+        return "Error: Invalid FOC response payload size";
     }
 
-    // First byte is msc-id, second is error code
     uint8_t mscId = info.payload[0];
     uint8_t errorCode = info.payload[1];
 
-    // Check for FOC error
-    if (errorCode != 0) {
-        return "Error: FOC command failed with error code " + byteToHex(errorCode);
+    // Extract FOC frame: [ack, focPayloadLength, focPayload, focCrc]
+    if (info.payload.size() < 4) {  // Minimum FOC frame size
+        return "Error: Invalid FOC frame size";
     }
 
-    return "Success: FOC command executed for MSC " + std::to_string(mscId);
+    uint8_t ack = info.payload[2];
+    uint8_t focPayloadLength = info.payload[3];
+    
+    // Check FOC frame validity
+    if (ack != static_cast<uint8_t>(ST_MPC::AckStatus::Success)) {
+        return "Error: FOC command failed, status: " + byteToHex(ack);
+    }
+
+    // Validate FOC CRC
+    std::vector<uint8_t> focFrame(info.payload.begin() + 2, info.payload.end());
+    if (!validateFocCRC(focFrame)) {
+        return "Error: Invalid FOC CRC";
+    }
+
+    // If it's a write response, we're done
+    if (focPayloadLength == 0) {
+        return "Success: FOC command executed";
+    }
+
+    // For read responses, extract the raw value
+    std::vector<uint8_t> focPayload(info.payload.begin() + 4, 
+                                   info.payload.begin() + 4 + focPayloadLength);
+    
+    std::stringstream ss;
+    ss << "Success: Raw FOC value = ";
+    for (const auto& byte : focPayload) {
+        ss << byteToHex(byte) << " ";
+    }
+    
+    return ss.str();
+}
+
+std::string FrameInterpreterRt::handleFocCommand(const ResponseInfo& info, ST_MPC::RegisterType type) 
+{
+    if (info.payload.size() < 2) {
+        return "Error: Invalid FOC response payload size";
+    }
+
+    uint8_t mscId = info.payload[0];
+    uint8_t errorCode = info.payload[1];
+
+    if (info.payload.size() < 4) {
+        return "Error: Invalid FOC frame size";
+    }
+
+    uint8_t ack = info.payload[2];
+    uint8_t focPayloadLength = info.payload[3];
+    
+    if (ack != static_cast<uint8_t>(ST_MPC::AckStatus::Success)) {
+        return "Error: FOC command failed, status: " + byteToHex(ack);
+    }
+
+    std::vector<uint8_t> focFrame(info.payload.begin() + 2, info.payload.end());
+    if (!validateFocCRC(focFrame)) {
+        return "Error: Invalid FOC CRC";
+    }
+
+    if (focPayloadLength == 0) {
+        return "Success: FOC command executed";
+    }
+
+    // Extract value and format according to type
+    std::vector<uint8_t> focPayload(info.payload.begin() + 4, 
+                                   info.payload.begin() + 4 + focPayloadLength);
+    
+    return "Success: " + formatFocValue(focPayload, type);
 }
 
 std::string FrameInterpreterRt::formatValue(const std::vector<uint8_t>& payload, RT::RegisterType type) const 
@@ -284,6 +359,65 @@ std::string FrameInterpreterRt::formatValue(const std::vector<uint8_t>& payload,
             ss << "Raw data: ";
             for (size_t i = 0; i < valueBytesSize; ++i) {
                 ss << byteToHex(valueBytes[i]) << " ";
+            }
+            break;
+        }
+    }
+    
+    return ss.str();
+}
+
+std::string FrameInterpreterRt::formatFocValue(const std::vector<uint8_t>& payload, ST_MPC::RegisterType type) const 
+{
+    if (payload.empty()) return "No data";
+    
+    std::stringstream ss;
+    
+    switch (type) {
+        case ST_MPC::RegisterType::UInt8: {
+            if (payload.size() < 1) return "Error: Invalid payload size for UInt8";
+            uint8_t value = payload[0];
+            ss << "Value: " << static_cast<int>(value);
+            break;
+        }
+        case ST_MPC::RegisterType::Int16: {
+            if (payload.size() < 2) return "Error: Invalid payload size for Int16";
+            int16_t value = static_cast<int16_t>(payload[0] | (payload[1] << 8));  // Little-endian
+            ss << "Value: " << value;
+            break;
+        }
+        case ST_MPC::RegisterType::UInt16: {
+            if (payload.size() < 2) return "Error: Invalid payload size for UInt16";
+            uint16_t value = static_cast<uint16_t>(payload[0] | (payload[1] << 8));  // Little-endian
+            ss << "Value: " << value;
+            break;
+        }
+        case ST_MPC::RegisterType::Int32: {
+            if (payload.size() < 4) return "Error: Invalid payload size for Int32";
+            int32_t value = static_cast<int32_t>(payload[0] | 
+                                              (payload[1] << 8) |
+                                              (payload[2] << 16) |
+                                              (payload[3] << 24));  // Little-endian
+            ss << "Value: " << value;
+            break;
+        }
+        case ST_MPC::RegisterType::UInt32: {
+            if (payload.size() < 4) return "Error: Invalid payload size for UInt32";
+            uint32_t value = static_cast<uint32_t>(payload[0] |
+                                               (payload[1] << 8) |
+                                               (payload[2] << 16) |
+                                               (payload[3] << 24));  // Little-endian
+            ss << "Value: " << value;
+            break;
+        }
+        case ST_MPC::RegisterType::CharPtr: {
+            ss << "String: " << std::string(payload.begin(), payload.end());
+            break;
+        }
+        default: {
+            ss << "Raw data: ";
+            for (const auto& byte : payload) {
+                ss << byteToHex(byte) << " ";
             }
             break;
         }

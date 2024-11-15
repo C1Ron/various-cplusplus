@@ -150,15 +150,17 @@ std::vector<uint8_t> FrameBuilderRt::buildReadFrame(uint8_t mscId, RT::RegisterI
     // Payload
     frame.addPayloadByte(static_cast<uint8_t>(regId));  // Register ID
 
+    /*
     auto result = frame.complete();
     std::cout << "FrameBuilder::buildReadFrame()" << std::endl;
     for (auto byte : result) {
         std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
     }
     std::cout << std::dec << std::endl;
-    return result;
+    return result; 
+    */
 
-    // return frame.complete();
+    return frame.complete();
 }
 
 std::vector<uint8_t> FrameBuilderRt::buildWriteFrame(uint8_t mscId, RT::RegisterId regId, 
@@ -235,6 +237,8 @@ std::vector<uint8_t> FrameBuilderRt::buildExecuteFrame(uint8_t mscId, RT::Execut
     
     // Payload
     frame.addPayloadByte(static_cast<uint8_t>(execId));
+
+    /*
     auto result = frame.complete();
     std::cout << "FrameBuilder::buildExecuteFrame()" << std::endl;
     for (auto byte : result) {
@@ -243,38 +247,223 @@ std::vector<uint8_t> FrameBuilderRt::buildExecuteFrame(uint8_t mscId, RT::Execut
     std::cout << std::dec << std::endl;
 
     return result;
+    */
+
+    return frame.complete();
 }
 
-std::vector<uint8_t> FrameBuilderRt::buildFocFrame(uint8_t mscId, ST_MPC::RegisterId regId) 
+std::vector<uint8_t> FrameBuilderRt::valueToBytes(int32_t value, ST_MPC::RegisterType type)
 {
+    switch (type) {
+        case ST_MPC::RegisterType::UInt8:
+            validateValue(value, RT::RegisterType::UInt8);
+            return {static_cast<uint8_t>(value)};
+            
+        case ST_MPC::RegisterType::Int16:
+            validateValue(value, RT::RegisterType::Int16);
+            return {
+                static_cast<uint8_t>(value & 0xFF),
+                static_cast<uint8_t>((value >> 8) & 0xFF)
+            };
+            
+        case ST_MPC::RegisterType::UInt16:
+            validateValue(value, RT::RegisterType::UInt16);
+            return {
+                static_cast<uint8_t>(value & 0xFF),
+                static_cast<uint8_t>((value >> 8) & 0xFF)
+            };
+            
+        case ST_MPC::RegisterType::Int32:
+        case ST_MPC::RegisterType::UInt32:
+            validateValue(value, RT::RegisterType::Int32);
+            return {
+                static_cast<uint8_t>(value & 0xFF),
+                static_cast<uint8_t>((value >> 8) & 0xFF),
+                static_cast<uint8_t>((value >> 16) & 0xFF),
+                static_cast<uint8_t>((value >> 24) & 0xFF)
+            };
+            
+        case ST_MPC::RegisterType::CharPtr:
+            throw FrameError("Cannot convert value to CharPtr type");
+            
+        default:
+            throw FrameError("Unknown ST_MPC register type");
+    }
+}
+
+uint8_t FrameBuilderRt::createFocStartFrame(uint8_t motorId, ST_MPC::CommandId cmd) const 
+{
+    // Motor ID in 3 MSB, Command in 5 LSB
+    return ((motorId & 0x07) << 5) | (static_cast<uint8_t>(cmd) & 0x1F);
+}
+
+uint8_t FrameBuilderRt::calculateFocCRC(const std::vector<uint8_t>& focFrame) const 
+{
+    uint16_t sum = 0;
+    for (const auto& byte : focFrame) {
+        sum += byte;
+    }
+    return static_cast<uint8_t>((sum & 0xFF) + (sum >> 8));
+}
+
+std::vector<uint8_t> FrameBuilderRt::buildFocPayload(uint8_t startFrame, uint8_t payloadLength, 
+                                                    std::vector<uint8_t> payload) const 
+{
+    std::vector<uint8_t> focFrame;
+    focFrame.push_back(startFrame);
+    focFrame.push_back(payloadLength);
+    focFrame.insert(focFrame.end(), payload.begin(), payload.end());
+    
+    // Calculate and append FOC CRC
+    focFrame.push_back(calculateFocCRC(focFrame));
+    return focFrame;
+}
+
+std::vector<uint8_t> FrameBuilderRt::buildFocReadFrame(uint8_t mscId, ST_MPC::RegisterId regId) 
+{
+    // Create FOC frame components
+    uint8_t startFrame = createFocStartFrame(mscId, ST_MPC::CommandId::GetRegister);
+    std::vector<uint8_t> regPayload = {static_cast<uint8_t>(regId)};
+    auto focPayload = buildFocPayload(startFrame, 0x01, regPayload);
+
+    // Build RT frame containing FOC payload
+    uint8_t commandId = static_cast<uint8_t>(RT::CommandId::FOC_COMMAND);
+    uint8_t errorId = static_cast<uint8_t>(RT::ErrorId::NO_ERROR);
     FrameData frame;
-    
-    // Header
-    frame.setStartByte(0xAA);          // Start byte
-    frame.setTotalSize(16 + 1 + 1);    // Total size including payload and CRC
-    frame.setPayloadSize(1);           // FOC command ID
-    frame.addPayloadByte(mscId);       // MSC ID
-    frame.addPayloadByte(0);           // Message request ID
-    frame.addPayloadByte(0);           // Message response ID
-    frame.addPayloadByte(0);           // Conversation ID
-    frame.addPayloadByte(0);           // Sender ID
-    frame.addPayloadByte(1);           // Number of blocks
-    frame.addPayloadByte(0);           // Sequence ID
-    frame.addPayloadByte(static_cast<uint8_t>(RT::CommandId::FOC_COMMAND)); // Command type
-    frame.addPayloadByte(static_cast<uint8_t>(RT::ErrorId::NO_ERROR));     // Error code
-    frame.addPayloadByte(0);           // Future use 0
-    frame.addPayloadByte(0);           // Future use 1
-    frame.addPayloadByte(0);           // Future use 2
-    frame.addPayloadByte(0xAA);        // End byte
-    
-    // Payload
-    frame.addPayloadByte(static_cast<uint8_t>(regId));
+    frame.setStartByte(0xAA);
+    frame.setTotalSize(16 + focPayload.size() + 1); // header + FOC payload + RT CRC
+    frame.setPayloadSize(focPayload.size()+1);      // payload size + CRC
+    frame.addPayloadByte(mscId);                    // MSC ID first part
+    frame.addPayloadByte(0x0c);                     // Message request ID
+    frame.addPayloadByte(0x00);                     // Message response ID
+    frame.addPayloadByte(0x63);                     // Conversation ID
+    frame.addPayloadByte(0x01);                     // Sender ID
+    frame.addPayloadByte(0x01);                     // Number of blocks
+    frame.addPayloadByte(0x01);                     // Sequence ID
+    frame.addPayloadByte(commandId);                // commandId
+    frame.addPayloadByte(errorId);                  // errorId
+    frame.addPayloadByte(0x00);                     // Future use 0
+    frame.addPayloadByte(0x00);                     // Future use 1
+    frame.addPayloadByte(0x00);                     // Future use 2
+    frame.addPayloadByte(0xAA);                     // End byte
+
+    // Add FOC payload
+    for (const auto& byte : focPayload) {
+        frame.addPayloadByte(byte);
+    }
+
+    /*
     auto result = frame.complete();
-    std::cout << "FrameBuilder::buildFocFrame()" << std::endl;
+    std::cout << "FrameBuilder::buildFocReadFrame()" << std::endl;
     for (auto byte : result) {
         std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
     }
     std::cout << std::dec << std::endl;
 
     return result;
+    */
+
+   return frame.complete();
+}
+
+std::vector<uint8_t> FrameBuilderRt::buildFocWriteFrame(uint8_t mscId, ST_MPC::RegisterId regId, 
+                                                       int32_t value, ST_MPC::RegisterType regType) 
+{
+    // Create FOC frame components
+    uint8_t startFrame = createFocStartFrame(mscId, ST_MPC::CommandId::SetRegister);
+    
+    // Convert value to bytes according to register type
+    auto valueBytes = valueToBytes(value, regType);
+    
+    // Build FOC payload: register ID followed by value bytes
+    std::vector<uint8_t> regPayload = {static_cast<uint8_t>(regId)};
+    regPayload.insert(regPayload.end(), valueBytes.begin(), valueBytes.end());
+    
+    auto focPayload = buildFocPayload(startFrame, regPayload.size(), regPayload);
+    
+    // Build RT frame containing FOC payload
+    uint8_t commandId = static_cast<uint8_t>(RT::CommandId::FOC_COMMAND);
+    uint8_t errorId = static_cast<uint8_t>(RT::ErrorId::NO_ERROR);
+    FrameData frame;
+    frame.setStartByte(0xAA);
+    frame.setTotalSize(16 + focPayload.size() + 1); // header + FOC payload + RT CRC
+    frame.setPayloadSize(focPayload.size() + 1);    // payload size + CRC
+    frame.addPayloadByte(mscId);                    // MSC ID first part
+    frame.addPayloadByte(0x0d);                     // Message request ID
+    frame.addPayloadByte(0x00);                     // Message response ID
+    frame.addPayloadByte(0x63);                     // Conversation ID
+    frame.addPayloadByte(0x01);                     // Sender ID
+    frame.addPayloadByte(0x01);                     // Number of blocks
+    frame.addPayloadByte(0x01);                     // Sequence ID
+    frame.addPayloadByte(commandId);                // commandId
+    frame.addPayloadByte(errorId);                  // errorId
+    frame.addPayloadByte(0x00);                     // Future use 0
+    frame.addPayloadByte(0x00);                     // Future use 1
+    frame.addPayloadByte(0x00);                     // Future use 2
+    frame.addPayloadByte(0xAA);                     // End byte
+
+    // Add FOC payload
+    for (const auto& byte : focPayload) {
+        frame.addPayloadByte(byte);
+    }
+
+    /*
+    auto result =  frame.complete();
+    std::cout << "FrameBuilder::buildFocWriteFrame()" << std::endl;
+    for (auto byte : result) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+    }
+    std::cout << std::dec << std::endl;
+
+    return result;
+    */
+
+    return frame.complete();
+}
+
+std::vector<uint8_t> FrameBuilderRt::buildFocExecuteFrame(uint8_t mscId, ST_MPC::ExecuteId execId) 
+{
+    // Create FOC frame components
+    uint8_t startFrame = createFocStartFrame(mscId, ST_MPC::CommandId::Execute);
+    std::vector<uint8_t> execPayload = {static_cast<uint8_t>(execId)};
+    auto focPayload = buildFocPayload(startFrame, 0x01, execPayload);
+    
+    // Build RT frame containing FOC payload
+    uint8_t commandId = static_cast<uint8_t>(RT::CommandId::FOC_COMMAND);
+    uint8_t errorId = static_cast<uint8_t>(RT::ErrorId::NO_ERROR);
+    FrameData frame;
+    frame.setStartByte(0xAA);
+    frame.setTotalSize(16 + focPayload.size() + 1); // header + FOC payload + RT CRC
+    frame.setPayloadSize(focPayload.size() + 1);    // payload size + CRC
+    frame.addPayloadByte(mscId);                    // MSC ID first part
+    frame.addPayloadByte(0x0e);                     // Message request ID
+    frame.addPayloadByte(0x00);                     // Message response ID
+    frame.addPayloadByte(0x63);                     // Conversation ID
+    frame.addPayloadByte(0x01);                     // Sender ID
+    frame.addPayloadByte(0x01);                     // Number of blocks
+    frame.addPayloadByte(0x01);                     // Sequence ID
+    frame.addPayloadByte(commandId);                // commandId
+    frame.addPayloadByte(errorId);                  // errorId
+    frame.addPayloadByte(0x00);                     // Future use 0
+    frame.addPayloadByte(0x00);                     // Future use 1
+    frame.addPayloadByte(0x00);                     // Future use 2
+    frame.addPayloadByte(0xAA);                     // End byte
+
+    // Add FOC payload
+    for (const auto& byte : focPayload) {
+        frame.addPayloadByte(byte);
+    }
+
+    /*
+    auto result = frame.complete();
+    std::cout << "FrameBuilderRt::buildFocExecuteFrame()" << std::endl;
+    for (auto byte : result) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+    }   
+
+    std::cout << std::dec << std::endl;
+
+    return result;
+    */
+    return frame.complete();
 }

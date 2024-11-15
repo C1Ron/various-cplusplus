@@ -57,17 +57,20 @@ private:
     std::string handleRtWrite(const ResponseInfo& info);
     std::string handleRtExecute(const ResponseInfo& info);
     std::string handleFocCommand(const ResponseInfo& info);
-    
+    std::string handleFocCommand(const ResponseInfo& info, ST_MPC::RegisterType type);
+
     // Parsing helpers
     ResponseInfo parseResponse(const std::vector<uint8_t>& response);
     Header parseHeader(const std::vector<uint8_t>& response);
     bool validateCRC(const std::vector<uint8_t>& frame) const;
     bool validateWriteReplyCRC(const std::vector<uint8_t>& frame) const;
+    bool validateFocCRC(const std::vector<uint8_t>& focFrame) const;
     
     // Value formatting
     std::string formatValue(const std::vector<uint8_t>& payload, RT::RegisterType type) const;
+    std::string formatFocValue(const std::vector<uint8_t>& payload, ST_MPC::RegisterType type) const;
     static std::string byteToHex(uint8_t byte);
-
+    
     // Error handling
     const std::unordered_map<RT::ErrorId, std::string> errorCodes = {
         {RT::ErrorId::UNKNOWN_START_BYTE, "Unknown Start Byte"},

@@ -25,6 +25,8 @@ public:
     CommandResult processCommand(const std::string& command);
     const std::string printAllRegisters() const;
     const std::string printAllExecutes() const;
+    const std::string printAllFocRegisters() const;
+    const std::string printAllFocExecutes() const;
 
 private:
     struct Register 
@@ -43,10 +45,18 @@ private:
     CommandResult handleWrite(const std::string& args);
     CommandResult handleExecute(const std::string& args);
     CommandResult handleFoc(const std::string& args);
+    CommandResult handleFocRead(const std::string& args);
+    CommandResult handleFocWrite(const std::string& args);
+    CommandResult handleFocExecute(const std::string& args);
+
     CommandResult handleLogStart(const std::string& args);
     CommandResult handleLogStop(const std::string& args);
-    CommandResult handleLogAdd(const std::string& args);
-    CommandResult handleLogRemove(const std::string& args);
+
+    CommandResult handleLogAddRt(const std::string& args);
+    CommandResult handleLogRemoveRt(const std::string& args);
+    CommandResult handleLogAddFoc(const std::string& args);
+    CommandResult handleLogRemoveFoc(const std::string& args);
+
     CommandResult handleLogStatus(const std::string& args);
     CommandResult handleLogConfig(const std::string& args);
     CommandResult handleError(const std::string& message, const std::exception& e) const;
@@ -69,6 +79,7 @@ private:
     std::unordered_map<std::string, Register> registerMap;
     std::unordered_map<std::string, RT::ExecuteId> executeMap;
     std::unordered_map<std::string, FocRegister> focRegisterMap;
+    std::unordered_map<std::string, ST_MPC::ExecuteId> focExecuteMap;
 };
 
 #endif // COMMAND_HANDLER_RT_H

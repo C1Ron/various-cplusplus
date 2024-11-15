@@ -56,6 +56,10 @@ void RtInterface::processUserInput(const std::string& userInput)
         printRegisters(*handler);
     } else if (userInput == "help-exec") {
         printExecutes(*handler);
+    } else if (userInput == "help-foc-reg") {
+        printFocRegisters(*handler);
+    } else if (userInput == "help-foc-exec") {
+        printFocExecutes(*handler);
     } else if (userInput == "exit") {
         std::cout << "Exiting..." << std::endl;
         SignalHandler::shouldExit(true);
@@ -72,17 +76,25 @@ void RtInterface::printHelp()
     << "\twrite      <reg>    <val>       - Write register value\n"
     << "\texec       <cmd>                - Execute command\n"
     << "\tramp       <speed>  <time>      - Execute speed ramp\n"
+    << "FOC commands:========================================================================\n"
+    << "\tfoc-read   <reg>                - Read FOC register value\n"
+    << "\tfoc-write  <reg>    <val>       - Write FOC register value\n"
+    << "\tfoc-exec   <cmd>                - Execute FOC command\n"
     << "Logging commands:====================================================================\n"
     << "\tlog-start                       - Start logging\n"
     << "\tlog-stop                        - Stop logging\n"
-    << "\tlog-add    <reg>                - Add register to logging\n"
-    << "\tlog-remove <reg>                - Remove register from logging\n"
+    << "\tlog-add-rt     <reg>            - Add register to logging\n"
+    << "\tlog-remove-rt  <reg>            - Remove register from logging\n"
+    << "\tlog-add-foc    <reg>            - Add FOC register to logging\n"
+    << "\tlog-remove-foc <reg>            - Remove FOC register from logging\n"
     << "\tlog-status                      - Show logging status\n"
-    << "\tlog-config <fname> <interval>   - Update logging configuration\n"
+    << "\tlog-config   <fname> <interval> - Update logging configuration\n"
     << "Other commands:======================================================================\n"
     << "\thelp                            - Show this help\n"
     << "\thelp-reg                        - Show all available registers and associated types\n"
     << "\thelp-exec                       - Show all available execute commands\n"
+    << "\thelp-foc-reg                    - Show all available FOC registers and associated types\n"
+    << "\thelp-foc-exec                   - Show all available FOC execute commands\n"
     << "\texit                            - Exit program\n"
     << "\tCTRL+D                          - Exit program\n";
 }
@@ -115,4 +127,15 @@ void RtInterface::printRegisters(const CommandHandlerRt& handler)
 void RtInterface::printExecutes(const CommandHandlerRt& handler)
 {
     std::cout << handler.printAllExecutes() << std::endl;
+}
+
+void RtInterface::printFocRegisters(const CommandHandlerRt& handler)
+{
+    std::cout << "RtInterface::printFocRegisters() \n";
+    std::cout << handler.printAllFocRegisters() << std::endl;
+}
+
+void RtInterface::printFocExecutes(const CommandHandlerRt& handler)
+{
+    std::cout << handler.printAllFocExecutes() << std::endl;
 }

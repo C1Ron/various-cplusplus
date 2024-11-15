@@ -1,3 +1,4 @@
+// LoggerRt.cpp
 #include "LoggerRt.h"
 #include "FrameBuilderRt.h"
 #include <iostream>
@@ -20,10 +21,10 @@ LoggerRt::~LoggerRt()
     }
 }
 
+// Basic operations remain the same
 void LoggerRt::start() 
 {
     if (!running.exchange(true)) {
-        // Open file if not already opened
         if (!fileOpened) {
             logFile.open(config.filename, std::ios::out | std::ios::trunc);
             if (!logFile.is_open()) {
@@ -56,12 +57,63 @@ bool LoggerRt::isRunning() const
     return running.load();
 }
 
-bool LoggerRt::removeRegister(const std::string& regName) 
+// New register handling methods
+bool LoggerRt::addRtRegister(const std::string& regName, RT::RegisterId regId, RT::RegisterType type) 
 {
     std::lock_guard<std::mutex> lock(registersMutex);
     
     auto it = std::find_if(registers.begin(), registers.end(),
-        [&regName](const RegisterInfo& info) { return info.name == regName; });
+        [&regName](const RtRegisterInfo& info) { return info.name == regName; });
+    
+    if (it != registers.end()) {
+        return false;
+    }
+
+    RtRegisterInfo info{regId, type, regName, false};  // false = RT register
+    registers.push_back(info);
+    
+    if (running.load()) {
+        writeHeader();
+    }
+    
+    return true;
+}
+
+bool LoggerRt::addFocRegister(const std::string& regName, ST_MPC::RegisterId regId, ST_MPC::RegisterType type) 
+{
+    std::lock_guard<std::mutex> lock(registersMutex);
+    
+    auto it = std::find_if(registers.begin(), registers.end(),
+        [&regName](const RtRegisterInfo& info) { return info.name == regName; });
+    
+    if (it != registers.end()) {
+        return false;
+    }
+
+    // Store FOC register using RT types but mark as FOC
+    RtRegisterInfo info{
+        static_cast<RT::RegisterId>(regId),
+        static_cast<RT::RegisterType>(type),
+        regName,
+        true  // true = FOC register
+    };
+    registers.push_back(info);
+    
+    if (running.load()) {
+        writeHeader();
+    }
+    
+    return true;
+}
+
+bool LoggerRt::removeRtRegister(const std::string& regName) 
+{
+    std::lock_guard<std::mutex> lock(registersMutex);
+    
+    auto it = std::find_if(registers.begin(), registers.end(),
+        [&regName](const RtRegisterInfo& info) { 
+            return info.name == regName && !info.isFoc; 
+        });
     
     if (it == registers.end()) {
         return false;
@@ -69,7 +121,6 @@ bool LoggerRt::removeRegister(const std::string& regName)
 
     registers.erase(it);
     
-    // If logging is active, rewrite the header
     if (running.load()) {
         writeHeader();
     }
@@ -77,22 +128,21 @@ bool LoggerRt::removeRegister(const std::string& regName)
     return true;
 }
 
-bool LoggerRt::addRegister(const std::string& regName, RT::RegisterId regId, RT::RegisterType type) 
+bool LoggerRt::removeFocRegister(const std::string& regName) 
 {
     std::lock_guard<std::mutex> lock(registersMutex);
     
-    // Check if register already exists
     auto it = std::find_if(registers.begin(), registers.end(),
-        [&regName](const RegisterInfo& info) { return info.name == regName; });
+        [&regName](const RtRegisterInfo& info) { 
+            return info.name == regName && info.isFoc; 
+        });
     
-    if (it != registers.end()) {
+    if (it == registers.end()) {
         return false;
     }
 
-    RegisterInfo info{regId, type, regName};
-    registers.push_back(info);
+    registers.erase(it);
     
-    // If logging is active, rewrite the header
     if (running.load()) {
         writeHeader();
     }
@@ -100,40 +150,16 @@ bool LoggerRt::addRegister(const std::string& regName, RT::RegisterId regId, RT:
     return true;
 }
 
-void LoggerRt::setConfig(const LogConfig& newConfig) 
+// Value extraction methods
+int32_t LoggerRt::extractRtValue(const std::vector<uint8_t>& response, RT::RegisterType type)
 {
-    if (running) {
-        throw std::runtime_error("Cannot change config while logger is running");
-    }
-    config = newConfig;
-    fileOpened = false;  // Force file to be reopened with new name
-}
-
-const LoggerRt::LogConfig& LoggerRt::getConfig() const 
-{
-    return config;
-}
-
-std::vector<std::string> LoggerRt::getLoggedRegisters() const 
-{
-    std::lock_guard<std::mutex> lock(registersMutex);
-    std::vector<std::string> names;
-    names.reserve(registers.size());
-    for (const auto& reg : registers) {
-        names.push_back(reg.name);
-    }
-    return names;
-}
-
-int32_t LoggerRt::extractValue(const std::vector<uint8_t>& response, RT::RegisterType type)
-{
-    if (response.size() < 17) { // 16 byte header + at least 1 byte payload
+    if (response.size() < 17) {
         throw std::runtime_error("Invalid response size");
     }
 
     switch (type) {
         case RT::RegisterType::UInt8:
-            return response[16];  // First byte after header
+            return response[16];
             
         case RT::RegisterType::Int16:
             return static_cast<int16_t>(response[16] | (response[17] << 8));
@@ -150,19 +176,50 @@ int32_t LoggerRt::extractValue(const std::vector<uint8_t>& response, RT::Registe
                 (response[18] << 16) | (response[19] << 24));
             
         case RT::RegisterType::Float: {
-            if (response.size() < 20) { // Need 4 bytes for float
+            if (response.size() < 20) {
                 throw std::runtime_error("Invalid response size for float");
             }
-            // Convert float to int32 representation
             uint32_t bits = static_cast<uint32_t>(response[16] | (response[17] << 8) |
                                                  (response[18] << 16) | (response[19] << 24));
             float value = *reinterpret_cast<float*>(&bits);
-            // Convert to fixed-point representation (multiply by 1000 to keep 3 decimal places)
             return static_cast<int32_t>(value * 1000.0f);
         }
             
         default:
             throw std::runtime_error("Unsupported register type for value extraction");
+    }
+}
+
+int32_t LoggerRt::extractFocValue(const std::vector<uint8_t>& response, ST_MPC::RegisterType type)
+{
+    // FOC response format: [mscId, errorCode, ack, focPayloadLength, focPayload, focCrc]
+    if (response.size() < 20) {  // Minimum size for FOC response
+        throw std::runtime_error("Invalid FOC response size");
+    }
+
+    // FOC payload starts at index 20 (16 + 4)
+    const uint8_t* payload = response.data() + 20;
+    
+    switch (type) {
+        case ST_MPC::RegisterType::UInt8:
+            return payload[0];
+            
+        case ST_MPC::RegisterType::Int16:
+            return static_cast<int16_t>(payload[0] | (payload[1] << 8));
+            
+        case ST_MPC::RegisterType::UInt16:
+            return static_cast<uint16_t>(payload[0] | (payload[1] << 8));
+            
+        case ST_MPC::RegisterType::Int32:
+            return static_cast<int32_t>(payload[0] | (payload[1] << 8) |
+                (payload[2] << 16) | (payload[3] << 24));
+            
+        case ST_MPC::RegisterType::UInt32:
+            return static_cast<uint32_t>(payload[0] | (payload[1] << 8) |
+                (payload[2] << 16) | (payload[3] << 24));
+            
+        default:
+            throw std::runtime_error("Unsupported FOC register type for value extraction");
     }
 }
 
@@ -176,7 +233,7 @@ void LoggerRt::loggingThread()
             std::map<std::string, int32_t> values;
 
             // Take a snapshot of registers with minimal lock time
-            std::vector<RegisterInfo> regs;
+            std::vector<RtRegisterInfo> regs;
             {
                 std::lock_guard<std::mutex> lock(registersMutex);
                 regs = registers;
@@ -190,14 +247,27 @@ void LoggerRt::loggingThread()
             // Read all registers without locking
             for (const auto& reg : regs) {
                 try {
-                    auto frame = frameBuilder.buildReadFrame(mscId, reg.id);
+                    std::vector<uint8_t> frame;
+                    if (reg.isFoc) {
+                        // Build FOC read frame
+                        frame = frameBuilder.buildFocReadFrame(mscId, 
+                            static_cast<ST_MPC::RegisterId>(reg.id));
+                    } else {
+                        // Build RT read frame
+                        frame = frameBuilder.buildReadFrame(mscId, reg.id);
+                    }
                     
                     std::lock_guard<std::mutex> lock(readMutex);
                     serial.sendFrame(frame);
                     auto response = serial.readFrame();
 
-                    if (response.size() >= 17) { // Minimum valid response size
-                        values[reg.name] = extractValue(response, reg.type);
+                    if (response.size() >= 17) {  // Minimum valid response size
+                        if (reg.isFoc) {
+                            values[reg.name] = extractFocValue(response, 
+                                static_cast<ST_MPC::RegisterType>(reg.type));
+                        } else {
+                            values[reg.name] = extractRtValue(response, reg.type);
+                        }
                     }
                 }
                 catch (const std::exception& e) {
@@ -269,4 +339,31 @@ void LoggerRt::writeLogLine(const std::chrono::system_clock::time_point& timesta
     }
     logFile << "\n";
     logFile.flush();
+}
+
+void LoggerRt::setConfig(const LogConfig& newConfig) 
+{
+    if (running) {
+        throw std::runtime_error("Cannot change config while logger is running");
+    }
+    config = newConfig;
+    fileOpened = false;  // Force file to be reopened with new name
+}
+
+const LoggerRt::LogConfig& LoggerRt::getConfig() const 
+{
+    return config;
+}
+
+std::vector<std::string> LoggerRt::getLoggedRegisters() const 
+{
+    std::lock_guard<std::mutex> lock(registersMutex);
+    std::vector<std::string> names;
+    names.reserve(registers.size());
+    for (const auto& reg : registers) {
+        // Include type (RT or FOC) in the register name
+        std::string prefix = reg.isFoc ? "FOC: " : "RT:  ";
+        names.push_back(prefix + reg.name);
+    }
+    return names;
 }
