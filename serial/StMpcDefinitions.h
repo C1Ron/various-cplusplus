@@ -154,6 +154,12 @@ namespace ST_MPC
         FaultOver = 0x0B
     };
 
+    enum class ControlMode : uint8_t
+    {
+        Torque = 0,
+        Speed = 1
+    };
+
 }; // namespace ST_MPC
 
 #endif // ST_MPC_DEFINITIONS_H
