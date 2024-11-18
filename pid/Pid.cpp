@@ -1,13 +1,6 @@
 #include "Pid.h"
 #include <cmath>
 
-double PIDController::clamp(double value, double min, double max) 
-{
-    if (value > max) return max;
-    if (value < min) return min;
-    return value;
-}
-
 PIDController::PIDController(double kp, double ki, double kd, double dt) :
     Kp(kp),
     Ki(ki),
@@ -59,10 +52,30 @@ void PIDController::setFilterCoefficient(double coeff)
 void PIDController::setSampleTime(double newDt) 
 {
     if (newDt > 0) {
-        Ki *= dt / newDt;
-        Kd *= newDt / dt;
+        Ki *= dt / newDt;   // Scale integral term to maintain integral value
+        Kd *= dt / newDt;   // Scale derivative term to maintain derivative value
         dt = newDt;
     }
+}
+
+double PIDController::getProportionalTerm() const 
+{
+    return Kp * (setpoint - measurement);
+}
+
+double PIDController::getIntegralTerm() const 
+{
+    return integral;
+}
+
+double PIDController::getDerivativeTerm() const 
+{
+    return -Kd * errorFiltered;
+}
+
+double PIDController::getError() const 
+{
+    return error;
 }
 
 void PIDController::reset() 
@@ -82,27 +95,27 @@ double PIDController::compute(double measurementNew)
     // Initialize on first run
     if (firstRun) {
         error = errorNew;
-        errorFiltered = errorNew;
+        errorFiltered = 0.0;
         measurement = measurementNew;
         firstRun = false;
         return 0.0;
     }
     
-    // Proportional term
+    // Proportional term =======================================
     double pTerm = Kp * errorNew;
     
-    // Integral term with anti-windup
+    // Integral term with anti-windup ==========================
     integral += Ki * errorNew * dt;
     integral = clamp(integral, -integralLimit, integralLimit);
     double iTerm = integral;
     
-    // Derivative term with filtering
-    double errorDifference = errorNew - error;
-    errorFiltered = filterCoeff * errorDifference + 
-                       (1.0 - filterCoeff) * errorFiltered;
+    // Derivative term with filtering ==========================
+    double diff = (measurementNew - measurement) / dt;
+    // Low-pass filter: y[n] = a * x[n] + (1 - a) * y[n-1], a in [0, 1]
+    errorFiltered = filterCoeff * diff + (1.0 - filterCoeff) * errorFiltered;
     
     // Use filtered derivative
-    double dTerm = Kd * (errorFiltered / dt);
+    double dTerm = Kd * errorFiltered;
     
     // Calculate total output
     double output = pTerm + iTerm + dTerm;
@@ -117,22 +130,10 @@ double PIDController::compute(double measurementNew)
     return output;
 }
 
-double PIDController::getProportionalTerm() const 
+double PIDController::clamp(double value, double min, double max) 
 {
-    return Kp * (setpoint - measurement);
+    if (value > max) return max;
+    if (value < min) return min;
+    return value;
 }
 
-double PIDController::getIntegralTerm() const 
-{
-    return integral;
-}
-
-double PIDController::getDerivativeTerm() const 
-{
-    return Kd * errorFiltered / dt;
-}
-
-double PIDController::getError() const 
-{
-    return error;
-}

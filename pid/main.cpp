@@ -7,20 +7,27 @@
 
 int main() 
 {
+    // Simulation parameters
+    double dt = 0.001;  // Time step
+    double Tf = 50.0;   // Final time
+
+    double Kp = 20.0;
+    double Ki = 0.1;
+    double Kd = 50.0;
     // Create and configure PID controller
-    PIDController pid(1.0, 0.1, 0); // Kp, Ki, Kd
+    PIDController pid(Kp, Ki, Kd);
     pid.setOutputLimits(-10.0, 10.0);
     pid.setIntegralLimit(10.0);
-    pid.setFilterCoefficient(0.1);
+    pid.setFilterCoefficient(0.8);
     
-    // SecondOrderSystem system(0.5, 1.0, 0.0, 0.0);  // ζ, ω, x0, v0;
-    FirstOrderSystem system(1.0, 0.0);  // τ, x0
+    SecondOrderSystem system(0.4, 1.5, 0.0, 0.0);  // ζ, ω, x0, v0;
+    // FirstOrderSystem system(1.0, 0.0);  // τ, x0
     
     // Create setpoint generator
-    auto stepGen = SetpointGenerator::createRamp(1.0, 2.0, 1.0);
+    auto stepGen = SetpointGenerator::createStep(1.0, 2.0, 0.0);
     
     // Create and run simulator
-    Simulator simulator(pid, system, stepGen, 0.001, 100.0);
+    Simulator simulator(pid, system, stepGen, dt, Tf);
     
     // Run simulation and plot results
     simulator.run();
