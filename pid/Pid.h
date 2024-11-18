@@ -8,12 +8,15 @@ public:
     PIDController(double Kp = 1.0, double Ki = 1.0, double Kd = 1.0, double dt = 0.01);
     ~PIDController() = default;
     
+    // Controller terms
+    double calcPTerm(double error);
+    double calcITerm(double error);
+    double calcDTerm(double error);
     // Configuration methods
     void setGains(double Kp, double Ki, double Kd);
     void setSetpoint(double setpoint);
     void setOutputLimits(double min, double max);
     void setIntegralLimit(double limit);
-    void setFilterCoefficient(double coeff);
     void setSampleTime(double dt);
 
     // Getters
@@ -24,7 +27,7 @@ public:
 
     // Operation methods
     void reset();
-    double compute(double measurement);
+    double update(double measurement);
 
 
 private:
@@ -43,11 +46,10 @@ private:
     double integralLimit;   
     
     // State variables
-    double error;       
+    double error;   
+    double prevError;    
     double integral;        
     double measurement; 
-    double filterCoeff;     
-    double errorFiltered;
 
     // Initialization flag
     bool firstRun;

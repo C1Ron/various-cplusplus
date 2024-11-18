@@ -11,7 +11,7 @@
 class Simulator 
 {
 public:
-    Simulator(PIDController& pid, System& system, 
+    Simulator(System& system, PIDController& pid, 
              SetpointGenerator& generator,
              double dt = 0.001, double simTime = 10.0);
     ~Simulator();

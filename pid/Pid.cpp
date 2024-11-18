@@ -11,12 +11,30 @@ PIDController::PIDController(double kp, double ki, double kd, double dt) :
     outputMax(INFINITY),
     integralLimit(INFINITY),
     error(0.0),
+    prevError(0.0),
     integral(0.0),
     measurement(0.0),
-    filterCoeff(0.1),
-    errorFiltered(0.0),
     firstRun(true)
 {}
+
+double PIDController::calcPTerm(double error) 
+{
+    return Kp * error;
+}
+
+double PIDController::calcITerm(double error) 
+{
+    integral += Ki * error * dt;
+    integral = clamp(integral, -integralLimit, integralLimit);
+    return integral;
+}
+
+double PIDController::calcDTerm(double error) 
+{
+    double diff = (error - prevError) / dt;
+    prevError = error;
+    return Kd * diff;
+}
 
 void PIDController::setGains(double kp, double ki, double kd) 
 {
@@ -44,11 +62,6 @@ void PIDController::setIntegralLimit(double limit)
     integralLimit = fabs(limit);
 }
 
-void PIDController::setFilterCoefficient(double coeff) 
-{
-    filterCoeff = clamp(coeff, 0.0, 1.0);
-}
-
 void PIDController::setSampleTime(double newDt) 
 {
     if (newDt > 0) {
@@ -60,7 +73,7 @@ void PIDController::setSampleTime(double newDt)
 
 double PIDController::getProportionalTerm() const 
 {
-    return Kp * (setpoint - measurement);
+    return Kp * error;
 }
 
 double PIDController::getIntegralTerm() const 
@@ -70,7 +83,7 @@ double PIDController::getIntegralTerm() const
 
 double PIDController::getDerivativeTerm() const 
 {
-    return -Kd * errorFiltered;
+    return Kd * error;
 }
 
 double PIDController::getError() const 
@@ -82,40 +95,29 @@ void PIDController::reset()
 {
     integral = 0.0;
     error = 0.0;
-    errorFiltered = 0.0;
+    prevError = 0.0;
     measurement = 0.0;
     firstRun = true;
 }
 
-double PIDController::compute(double measurementNew) 
+double PIDController::update(double m) 
 {
     // Calculate error
-    double errorNew = setpoint - measurementNew;
+    double e = setpoint - m;
     
     // Initialize on first run
     if (firstRun) {
-        error = errorNew;
-        errorFiltered = 0.0;
-        measurement = measurementNew;
+        error = e;
+        prevError = e;
+        measurement = m;
         firstRun = false;
         return 0.0;
     }
     
     // Proportional term =======================================
-    double pTerm = Kp * errorNew;
-    
-    // Integral term with anti-windup ==========================
-    integral += Ki * errorNew * dt;
-    integral = clamp(integral, -integralLimit, integralLimit);
-    double iTerm = integral;
-    
-    // Derivative term with filtering ==========================
-    double diff = (measurementNew - measurement) / dt;
-    // Low-pass filter: y[n] = a * x[n] + (1 - a) * y[n-1], a in [0, 1]
-    errorFiltered = filterCoeff * diff + (1.0 - filterCoeff) * errorFiltered;
-    
-    // Use filtered derivative
-    double dTerm = Kd * errorFiltered;
+    double pTerm = calcPTerm(e);
+    double iTerm = calcITerm(e);
+    double dTerm = calcDTerm(e);
     
     // Calculate total output
     double output = pTerm + iTerm + dTerm;
@@ -124,8 +126,8 @@ double PIDController::compute(double measurementNew)
     output = clamp(output, outputMin, outputMax);
     
     // Store error for next iteration
-    error = errorNew;
-    measurement = measurementNew;
+    error = e;
+    measurement = m;
     
     return output;
 }
