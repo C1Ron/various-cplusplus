@@ -20,7 +20,7 @@ SRC = mainRtIf.cpp \
 OBJS = $(SRC:%.cpp=$(OBJDIR)/%.o)
 
 # Executable name
-EXE = mainRtIf
+EXE = rtIf
 
 # Default target
 all: $(EXE)

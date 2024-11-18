@@ -54,6 +54,7 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
         {"Valpha", {ST_MPC::RegisterId::Valpha, ST_MPC::RegisterType::Int16}},
         {"Vbeta", {ST_MPC::RegisterId::Vbeta, ST_MPC::RegisterType::Int16}},
         {"el-angle-meas", {ST_MPC::RegisterId::ElAngleMeas, ST_MPC::RegisterType::Int16}},
+        {"Iq-ref-speed-mode", {ST_MPC::RegisterId::IqRefSpeedMode, ST_MPC::RegisterType::Int16}},
         {"ramp-final-speed", {ST_MPC::RegisterId::RampFinalSpeed, ST_MPC::RegisterType::Int32}},
         {"ramp-duration", {ST_MPC::RegisterId::RampDuration, ST_MPC::RegisterType::UInt16}},
         {"speed-Kp-div", {ST_MPC::RegisterId::SpeedKpDiv, ST_MPC::RegisterType::UInt16}},

@@ -61,6 +61,7 @@ namespace ST_MPC
         Valpha = 0x2D,         // S16
         Vbeta = 0x2E,          // S16
         ElAngleMeas = 0x2F,    // S16
+        IqRefSpeedMode = 0x41, // S16
         RampFinalSpeed = 0x5B, // S32
         RampDuration = 0x5C,   // U16
         SpeedKpDiv = 0x6E,     // U16
