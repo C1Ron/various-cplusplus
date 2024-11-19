@@ -1,17 +1,16 @@
 #ifndef PID_H
 #define PID_H
 
+#include <iostream>
+#include <cmath>
+
 class PIDController 
 {
 public:
     // Constructor and destructor
     PIDController(double Kp = 1.0, double Ki = 1.0, double Kd = 1.0, double dt = 0.01);
     ~PIDController() = default;
-    
-    // Controller terms
-    double calcPTerm(double error);
-    double calcITerm(double error);
-    double calcDTerm(double error);
+
     // Configuration methods
     void setGains(double Kp, double Ki, double Kd);
     void setSetpoint(double setpoint);
@@ -24,6 +23,8 @@ public:
     double getIntegralTerm() const;
     double getDerivativeTerm() const;
     double getError() const;
+    double getTimestep() const;
+    void printGains() const;
 
     // Operation methods
     void reset();
@@ -53,6 +54,11 @@ private:
 
     // Initialization flag
     bool firstRun;
+
+    // Controller terms
+    double calcPTerm(double error);
+    double calcITerm(double error);
+    double calcDTerm(double error);
     
     // Utility functions
     double clamp(double value, double min, double max);

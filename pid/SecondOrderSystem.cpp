@@ -43,3 +43,9 @@ double SecondOrderSystem::getVelocity() const
 { 
     return velocity; 
 }
+
+void SecondOrderSystem::reset() 
+{
+    position = 0.0;
+    velocity = 0.0;
+}

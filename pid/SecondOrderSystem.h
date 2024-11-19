@@ -20,5 +20,6 @@ public:
     void update(double input, double dt) override;
     double getPosition() const override;
     double getVelocity() const override;
+    void reset() override;
 };
 #endif // SECOND_ORDER_SYSTEM_H

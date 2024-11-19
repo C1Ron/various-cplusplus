@@ -38,3 +38,8 @@ double FirstOrderSystem::getVelocity() const
 { 
     return velocity(0.0, position); 
 }
+
+void FirstOrderSystem::reset() 
+{
+    position = 0.0;
+}

@@ -2,13 +2,9 @@
 #include <iostream>
 #include <cmath>
 
-Simulator::Simulator(System& sys, PIDController& pidController, 
-                    SetpointGenerator& generator, double timestep, double time)
-    : pid(pidController)
-    , system(sys)
-    , setpointGen(generator)
-    , dt(timestep)
-    , simTime(time)
+Simulator::Simulator(System& sys, PIDController& pidController, SetpointGenerator& generator, 
+                    double timestep, double time)
+    : pid(pidController), system(sys), setpointGen(generator), dt(timestep), simTime(time)
 {
     dataFile.open("data.txt");
     // Redirect stderr to /dev/null when opening gnuplot
@@ -26,28 +22,39 @@ void Simulator::saveDataPoint(double time, double setpoint,
             << output << " " << control << std::endl;
 }
 
-void Simulator::run() {
-    const int steps = static_cast<int>(simTime / dt);
-    std::cout << "Running simulation...\n";
-    
-    for (int i = 0; i < steps; i++) {
+void Simulator::run() 
+{
+    const int simSteps = static_cast<int>(simTime / dt);
+    const int ctrlSteps = static_cast<int>(pid.getTimestep() / dt);
+
+    std::cout << "Running simulation: ctrlSteps = " << ctrlSteps << "...\n";
+
+    double lastControl = 0.0; // Store the last control signal
+
+    for (int i = 0; i < simSteps; i++) {
         double time = i * dt;
-        
-        // Get setpoint
+
+        // Get setpoint for the current time
         double setpoint = setpointGen.getValue(time);
-        pid.setSetpoint(setpoint);
-        
-        // Compute control and update system
-        double measurement = system.getPosition();
-        double control = pid.update(measurement);
-        system.update(control, dt);
-        
+
+        // Update controller at its timestep
+        if (i % ctrlSteps == 0) {
+            pid.setSetpoint(setpoint);
+            double measurement = system.getPosition();
+            lastControl = pid.update(measurement);
+        }
+
+        // Always update the system with the last control signal
+        system.update(lastControl, dt);
+
         // Save data (every 10ms)
         if (i % 10 == 0) {
-            saveDataPoint(time, setpoint, measurement, control);
+            saveDataPoint(time, setpoint, system.getPosition(), lastControl);
         }
     }
 }
+
+
 
 void Simulator::plot() {
     if (!gnuplotPipe) {
@@ -99,3 +106,14 @@ void Simulator::cleanup() {
     }
 }
 
+void Simulator::reset(double newDt, double newSimTime) 
+{
+    cleanup();
+    dt = newDt;
+    simTime = newSimTime;
+    dataFile.open("data.txt");
+    gnuplotPipe = popen("gnuplot 2>/dev/null", "w");
+    system.reset();
+    pid.reset();
+    pid.setSampleTime(dt);
+}

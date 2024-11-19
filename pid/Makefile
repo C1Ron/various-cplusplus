@@ -12,6 +12,7 @@ SOURCES = main.cpp \
           SetpointGenerator.cpp \
 		  FirstOrderSystem.cpp \
 		  SecondOrderSystem.cpp \
+		  MassSpringDamper.cpp \
           Simulator.cpp
 
 # Object files
@@ -43,7 +44,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # Clean build files
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) $(TARGET) data.txt
 
 # Clean and rebuild
 rebuild: clean all

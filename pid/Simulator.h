@@ -11,25 +11,26 @@
 class Simulator 
 {
 public:
-    Simulator(System& system, PIDController& pid, 
-             SetpointGenerator& generator,
+    Simulator(System& system, PIDController& pid, SetpointGenerator& generator,
              double dt = 0.001, double simTime = 10.0);
     ~Simulator();
     
     void run();
     void plot();
     void close();
+    void reset(double newDt, double newSimTime);
+    
 private:
+
     PIDController& pid;
     System& system;
     SetpointGenerator& setpointGen;
     
+    double dt;      // Simulation time step
+    double simTime; // Total simulation time
+
     std::ofstream dataFile;
     FILE* gnuplotPipe;
-    
-    // Simulation parameters
-    double dt;
-    double simTime;
     
     void saveDataPoint(double time, double setpoint, double output, double control);
     void cleanup();

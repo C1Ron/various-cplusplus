@@ -1,5 +1,4 @@
 #include "Pid.h"
-#include <cmath>
 
 PIDController::PIDController(double kp, double ki, double kd, double dt) :
     Kp(kp),
@@ -65,7 +64,9 @@ void PIDController::setIntegralLimit(double limit)
 void PIDController::setSampleTime(double newDt) 
 {
     if (newDt > 0) {
-        Ki *= dt / newDt;   // Scale integral term to maintain integral value
+        // The smaller the time-step, the smaller the integral term should be
+        //Ki *= dt / newDt;   // Scale integral term to maintain integral value
+        // The smaller the time-step, the larger the derivative term should be
         Kd *= dt / newDt;   // Scale derivative term to maintain derivative value
         dt = newDt;
     }
@@ -91,6 +92,11 @@ double PIDController::getError() const
     return error;
 }
 
+double PIDController::getTimestep() const 
+{
+    return dt;
+}
+
 void PIDController::reset() 
 {
     integral = 0.0;
@@ -98,6 +104,11 @@ void PIDController::reset()
     prevError = 0.0;
     measurement = 0.0;
     firstRun = true;
+}
+
+void PIDController::printGains() const 
+{
+    std::cout << "Kp: " << Kp << ", Ki: " << Ki << ", Kd: " << Kd << std::endl;
 }
 
 double PIDController::update(double m) 
@@ -114,7 +125,7 @@ double PIDController::update(double m)
         return 0.0;
     }
     
-    // Proportional term =======================================
+    // PID terms
     double pTerm = calcPTerm(e);
     double iTerm = calcITerm(e);
     double dTerm = calcDTerm(e);
