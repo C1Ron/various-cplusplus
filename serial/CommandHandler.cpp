@@ -23,17 +23,17 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
         {"status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
         {"control-mode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
         {"speed-ref", {ST_MPC::RegisterId::SpeedRef, ST_MPC::RegisterType::Int32}},
-        {"speed-Kp", {ST_MPC::RegisterId::SpeedKp, ST_MPC::RegisterType::UInt16}},
-        {"speed-Ki", {ST_MPC::RegisterId::SpeedKi, ST_MPC::RegisterType::UInt16}},
-        {"speed-Kd", {ST_MPC::RegisterId::SpeedKd, ST_MPC::RegisterType::UInt16}},
+        {"speed-Kp", {ST_MPC::RegisterId::SpeedKp, ST_MPC::RegisterType::Int16}}, // bug in SDK: is Int16
+        {"speed-Ki", {ST_MPC::RegisterId::SpeedKi, ST_MPC::RegisterType::Int16}}, // bug in SDK: is Int16
+        {"speed-Kd", {ST_MPC::RegisterId::SpeedKd, ST_MPC::RegisterType::Int16}}, // bug in SDK: is Int16
         {"torque-ref", {ST_MPC::RegisterId::TorqueRef, ST_MPC::RegisterType::Int16}},
-        {"torque-Kp", {ST_MPC::RegisterId::TorqueKp, ST_MPC::RegisterType::UInt16}},
-        {"torque-Ki", {ST_MPC::RegisterId::TorqueKi, ST_MPC::RegisterType::UInt16}},
-        {"torque-Kd", {ST_MPC::RegisterId::TorqueKd, ST_MPC::RegisterType::UInt16}},
+        {"torque-Kp", {ST_MPC::RegisterId::TorqueKp, ST_MPC::RegisterType::Int16}}, // bug in SDK: is Int16
+        {"torque-Ki", {ST_MPC::RegisterId::TorqueKi, ST_MPC::RegisterType::Int16}}, // bug in SDK: is Int16
+        {"torque-Kd", {ST_MPC::RegisterId::TorqueKd, ST_MPC::RegisterType::Int16}}, // bug in SDK: is Int16
         {"flux-ref", {ST_MPC::RegisterId::FluxRef, ST_MPC::RegisterType::Int16}},
-        {"flux-Kp", {ST_MPC::RegisterId::FluxKp, ST_MPC::RegisterType::UInt16}},
-        {"flux-Ki", {ST_MPC::RegisterId::FluxKi, ST_MPC::RegisterType::UInt16}},
-        {"flux-Kd", {ST_MPC::RegisterId::FluxKd, ST_MPC::RegisterType::UInt16}},
+        {"flux-Kp", {ST_MPC::RegisterId::FluxKp, ST_MPC::RegisterType::Int16}},     // bug in SDK: is Int16
+        {"flux-Ki", {ST_MPC::RegisterId::FluxKi, ST_MPC::RegisterType::Int16}},     // bug in SDK: is Int16
+        {"flux-Kd", {ST_MPC::RegisterId::FluxKd, ST_MPC::RegisterType::Int16}},     // bug in SDK: is Int16
         {"status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
         {"flags",  {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
         {"control-mode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},

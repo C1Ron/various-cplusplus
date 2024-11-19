@@ -75,7 +75,7 @@ void RtInterface::printHelp()
     << "\tread       <reg>                - Read register value\n"
     << "\twrite      <reg>    <val>       - Write register value\n"
     << "\texec       <cmd>                - Execute command\n"
-    << "\tramp       <speed>  <time>      - Execute speed ramp\n"
+    << "\texec ramp  <speed>  <time>      - Execute speed ramp\n"
     << "FOC commands:========================================================================\n"
     << "\tfoc-read   <reg>                - Read FOC register value\n"
     << "\tfoc-write  <reg>    <val>       - Write FOC register value\n"

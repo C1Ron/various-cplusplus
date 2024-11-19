@@ -13,7 +13,7 @@ SRC1 = main.cpp \
 		FrameBuilder.cpp \
 		FrameInterpreter.cpp \
 		SignalHandler.cpp \
-		Logger.cpp
+		Logger.cpp 
 
 SRC2 = mainMscIf.cpp \
 		CommandHandler.cpp \

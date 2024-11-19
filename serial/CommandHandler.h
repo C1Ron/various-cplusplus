@@ -5,11 +5,13 @@
 #include "FrameBuilder.h"
 #include "FrameInterpreter.h"
 #include "StMpcDefinitions.h"
+#include "Logger.h"
+
 #include <string>
 #include <unordered_map>
 #include <functional>
 #include <vector>
-#include "Logger.h"
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
