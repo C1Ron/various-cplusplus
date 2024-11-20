@@ -5,9 +5,9 @@ class System
 {
 public:
     virtual ~System() = default;
-    virtual double getPosition() const = 0;
-    virtual double getVelocity() const = 0;
-    virtual void update(double u, double dt) = 0;
+    virtual double getX() const = 0;
+    virtual double getDX() const = 0;
+    virtual void integrate(double u, double dt) = 0;
     virtual void reset() = 0;
 };
 

@@ -27,7 +27,7 @@ void Simulator::run()
     const int simSteps = static_cast<int>(simTime / dt);
     const int ctrlSteps = static_cast<int>(pid.getTimestep() / dt);
 
-    std::cout << "Running simulation: ctrlSteps = " << ctrlSteps << "...\n";
+    std::cout << "Running simulation: ctrlSteps = " << ctrlSteps << ", simSteps = " << simSteps << std::endl;
 
     double lastControl = 0.0; // Store the last control signal
 
@@ -40,16 +40,16 @@ void Simulator::run()
         // Update controller at its timestep
         if (i % ctrlSteps == 0) {
             pid.setSetpoint(setpoint);
-            double measurement = system.getPosition();
+            double measurement = system.getX();
             lastControl = pid.update(measurement);
         }
 
         // Always update the system with the last control signal
-        system.update(lastControl, dt);
+        system.integrate(lastControl, dt);
 
         // Save data (every 10ms)
         if (i % 10 == 0) {
-            saveDataPoint(time, setpoint, system.getPosition(), lastControl);
+            saveDataPoint(time, setpoint, system.getX(), lastControl);
         }
     }
 }
@@ -63,7 +63,7 @@ void Simulator::plot() {
     }
 
     // First plot: System Response
-    fprintf(gnuplotPipe, "set terminal qt 0 size 1600,600 font 'Arial,16'\n");
+    fprintf(gnuplotPipe, "set terminal qt 1 size 1600,600 font 'Arial,16'\n");
     fprintf(gnuplotPipe, "set grid\n");
     fprintf(gnuplotPipe, "set title 'System Response'\n");
     fprintf(gnuplotPipe, "set xlabel 'Time (s)'\n");
@@ -72,7 +72,7 @@ void Simulator::plot() {
     fprintf(gnuplotPipe, "'data.txt' using 1:3 title 'Output' with lines lw 2 lc 'blue'\n");
 
     // Second plot: Error and Control
-    fprintf(gnuplotPipe, "set terminal qt 1 size 1600,600 font 'Arial,16'\n");
+    fprintf(gnuplotPipe, "set terminal qt 2 size 1600,600 font 'Arial,16'\n");
     fprintf(gnuplotPipe, "set grid\n");
     fprintf(gnuplotPipe, "set title 'Error and Control Signal'\n");
     fprintf(gnuplotPipe, "set xlabel 'Time (s)'\n");

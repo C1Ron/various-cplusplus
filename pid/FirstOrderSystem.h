@@ -9,14 +9,14 @@ class FirstOrderSystem : public System
 public:
     FirstOrderSystem(double timeConstant, double initPos);
     
-    void update(double input, double dt) override;
-    double getPosition() const override;
-    double getVelocity() const override;
+    void integrate(double input, double dt) override;
+    double getX() const override;
+    double getDX() const override;
     void reset() override;
 
 private:
     double timeConstant;
     double position;
-    double velocity(double u, double x) const;
+    double diff(double u, double x) const;
 };
 #endif // FIRST_ORDER_SYSTEM_H

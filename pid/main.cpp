@@ -6,14 +6,16 @@
 #include "MassSpringDamper.h"
 #include "SetpointGenerator.h"
 
-int main() 
+int main(int argc, char** argv) 
 {
-    // Simulation parameters
-    double dt =  0.0001;     // Simulator time step
-    double dtc = 0.01;       // Controller time step
+    double dtc = static_cast<double>(argc > 1) ? std::stod(argv[1]) : 0.5;
+    double Kp = static_cast<double>(argc > 2) ? std::stod(argv[2]) : 2.0;
+    double Ki = static_cast<double>(argc > 3) ? std::stod(argv[3]) : 5.0;
+    double Kd = static_cast<double>(argc > 4) ? std::stod(argv[4]) : 0.0;
+    double dt = 0.0001;       // Simulation time step
     double Tf = 50.0;        // Final time
 
-    double Kp = 1.0, Ki = 1.0, Kd = 0.0;
+    // System parameters
     double m = 1.0, c = 2.0, k = 5.0;
 
     // Create and configure PID controller
@@ -24,10 +26,11 @@ int main()
     MassSpringDamper system(m, c, k, 0.0, 0.0, 0.0);
 
     // Create setpoint generator
-    auto stepGen = SetpointGenerator::createStep(1.0, 2.0, 0.0);
+    // auto input = SetpointGenerator::createStep(1.0, 2.0, 0.0);
+    auto input = SetpointGenerator::createRamp(0.3, 2.0, 1.0);
 
     // Create and run simulator
-    Simulator simulator(system, pid, stepGen, dt, Tf);
+    Simulator simulator(system, pid, input, dt, Tf);
     simulator.run();
     simulator.plot();
 

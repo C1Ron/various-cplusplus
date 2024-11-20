@@ -65,7 +65,7 @@ void PIDController::setSampleTime(double newDt)
 {
     if (newDt > 0) {
         // The smaller the time-step, the smaller the integral term should be
-        //Ki *= dt / newDt;   // Scale integral term to maintain integral value
+        Ki *= dt / newDt;   // Scale integral term to maintain integral value
         // The smaller the time-step, the larger the derivative term should be
         Kd *= dt / newDt;   // Scale derivative term to maintain derivative value
         dt = newDt;
