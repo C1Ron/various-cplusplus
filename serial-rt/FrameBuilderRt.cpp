@@ -1,5 +1,6 @@
 #include "FrameBuilderRt.h"
 #include <sstream>
+#include <cstring>
 
 std::vector<uint8_t> FrameBuilderRt::FrameData::complete() 
 {
@@ -72,7 +73,14 @@ std::vector<uint8_t> FrameBuilderRt::valueToBytes(int32_t value, RT::RegisterTyp
             bytes = {static_cast<uint8_t>(value)};
             break;
             
-        case RT::RegisterType::Int16:
+        case RT::RegisterType::Int16: {
+            // Little-endian: LSB first
+            bytes = {
+                static_cast<uint8_t>(value & 0xFF),           // LSB
+                static_cast<uint8_t>((value >> 8) & 0xFF)     // MSB
+            };
+            break;
+        }
         case RT::RegisterType::UInt16: {
             // Little-endian: LSB first
             bytes = {
@@ -82,7 +90,16 @@ std::vector<uint8_t> FrameBuilderRt::valueToBytes(int32_t value, RT::RegisterTyp
             break;
         }
             
-        case RT::RegisterType::Int32:
+        case RT::RegisterType::Int32: {
+            // Little-endian: LSB first
+            bytes = {
+                static_cast<uint8_t>(value & 0xFF),           // LSB
+                static_cast<uint8_t>((value >> 8) & 0xFF),
+                static_cast<uint8_t>((value >> 16) & 0xFF),
+                static_cast<uint8_t>((value >> 24) & 0xFF)    // MSB
+            };
+            break;
+        }
         case RT::RegisterType::UInt32: {
             // Little-endian: LSB first
             bytes = {
@@ -127,12 +144,12 @@ std::vector<uint8_t> FrameBuilderRt::buildReadFrame(uint8_t mscId, RT::RegisterI
     frame.setStartByte(0xAA);          // startByte always 0xAA
     frame.setTotalSize(0x12);          // total size: 16 (header) + 2 (payload) = 18 bytes (0x12)
     frame.setPayloadSize(0x02);        // payload size: 2 bytes
-    frame.addPayloadByte(0x00);        // mscId field (first part)
+    frame.addPayloadByte(mscId);       // mscId field (first part)
     
     // Field 1: [msgRequestId, msgResponseId, conversationId, senderId]
     frame.addPayloadByte(0x01);        // msgRequestId
     frame.addPayloadByte(0x00);        // msgResponseId
-    frame.addPayloadByte(0x63);        // conversationId
+    frame.addPayloadByte(0x01);        // conversationId
     frame.addPayloadByte(0x01);        // senderId
     
     // Field 2: [numBlocks, seqId, commandType, errorCode]
@@ -166,22 +183,33 @@ std::vector<uint8_t> FrameBuilderRt::buildReadFrame(uint8_t mscId, RT::RegisterI
 std::vector<uint8_t> FrameBuilderRt::buildWriteFrame(uint8_t mscId, RT::RegisterId regId, 
                                                     int32_t value, RT::RegisterType regType) 
 {
-    auto valueBytes = valueToBytes(value, regType);
+    // auto valueBytes = valueToBytes(value, regType);
+    std::vector<uint8_t> valueBytes = valueToBytes(value, regType);
     
     // Set sizes based on register type
     uint8_t payloadSize;
     uint8_t totalSize;
-    
+
     switch (regType) {
         case RT::RegisterType::Float:
             payloadSize = 0x06;  // regId(1) + float value(4) + CRC(1)
             totalSize = 0x16;    // header(16) + payload(6)
             break;
-        case RT::RegisterType::UInt16:
-            payloadSize = 0x04;  // regId(1) + uint16 value(2) + CRC(1)
+        case RT::RegisterType::UInt8:
+            payloadSize = 0x04;  // regId(1) + uint8 value(1) + CRC(1)
             totalSize = 0x14;    // header(16) + payload(4)
             break;
-        // Add other cases as needed
+        case RT::RegisterType::UInt16:
+        case RT::RegisterType::Int16:
+            payloadSize = 0x04;  // regId(1) + int16 value(2) + CRC(1)
+            totalSize = 0x14;    // header(16) + payload(4)
+            break;
+        case RT::RegisterType::UInt32:
+        case RT::RegisterType::Int32:
+            payloadSize = 0x06;  // regId(1) + int32 value(4) + CRC(1)
+            totalSize = 0x16;    // header(16) + payload(6)
+            break;
+        
         default:
             throw FrameError("Unsupported register type for write");
     }
@@ -192,7 +220,7 @@ std::vector<uint8_t> FrameBuilderRt::buildWriteFrame(uint8_t mscId, RT::Register
     frame.setStartByte(0xAA);
     frame.setTotalSize(totalSize);
     frame.setPayloadSize(payloadSize);
-    frame.addPayloadByte(0x00);        // MSC ID first part
+    frame.addPayloadByte(mscId);       // MSC ID first part
     frame.addPayloadByte(0x0a);        // Message request ID
     frame.addPayloadByte(0x00);        // Message response ID
     frame.addPayloadByte(0x63);        // Conversation ID

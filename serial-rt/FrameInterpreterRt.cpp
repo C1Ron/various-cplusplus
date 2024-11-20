@@ -17,11 +17,6 @@ std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& re
         return "Error: Invalid response size";
     }
 
-    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
-        // RT_WRITE_REPLY has a bug
-        return "Success: Write command executed";
-    }
-
     ResponseInfo info = parseResponse(response);
     
     // Handle bad CRC first
@@ -56,10 +51,6 @@ std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& re
         return "Error: Invalid response size";
     }
 
-    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
-        return "Success: Write command executed";
-    }
-
     ResponseInfo info = parseResponse(response);
     
     if (!info.validCRC) {
@@ -77,10 +68,6 @@ std::string FrameInterpreterRt::interpretResponse(const std::vector<uint8_t>& re
 {
     if (response.size() < 16) {
         return "Error: Invalid response size";
-    }
-
-    if (response[10] == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
-        return "Success: Write command executed";
     }
 
     ResponseInfo info = parseResponse(response);
@@ -101,19 +88,21 @@ FrameInterpreterRt::ResponseInfo FrameInterpreterRt::parseResponse(const std::ve
     ResponseInfo info;
     info.header = parseHeader(response);
 
-    // Handle special case for RT_WRITE_REPLY
-    if (info.header.commandType == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
-        info.validCRC = validateWriteReplyCRC(response);
-        return info;
-    }
-
     // Extract payload for normal cases
     if (response.size() > 16) {
         info.payload.assign(response.begin() + 16, response.end() - 1);
         info.crc = response.back();
     }
 
-    info.validCRC = validateCRC(response);
+    if ((info.header.commandType == static_cast<uint8_t>(RT::CommandId::RT_READ_REPLY)) && 
+    info.payload[0] == static_cast<uint8_t>(RT::RegisterId::GIT_VERSION)) {
+        info.validCRC = true;
+    } else if (info.header.commandType == static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {    
+        info.validCRC = true;
+    } 
+    else {
+        info.validCRC = validateCRC(response);
+    }
     return info;
 }
 
@@ -191,53 +180,91 @@ std::string FrameInterpreterRt::handleRtRead(const ResponseInfo& info, RT::Regis
 {
     if (info.payload.empty()) {
         return "Error: Empty read response";
+    } else if (info.header.commandType != static_cast<uint8_t>(RT::CommandId::RT_READ_REPLY)) {
+        return "Error: Unexpected command type";
+    } else if (info.header.errorCode != static_cast<uint8_t>(RT::ErrorId::NO_ERROR)) {
+        auto it = errorCodes.find(static_cast<RT::ErrorId>(info.header.errorCode));
+        return "Error: " + (it != errorCodes.end() ? it->second : "Unknown error");
+    } else {
+        return "Success: " + formatValue(info.payload, type);
     }
+}
+
+std::string FrameInterpreterRt::handleRtWrite(const ResponseInfo& info) 
+{
+    if (info.header.commandType != static_cast<uint8_t>(RT::CommandId::RT_WRITE_REPLY)) {
+        return "Error: Unexpected command type";
+    } else if (info.header.errorCode != static_cast<uint8_t>(RT::ErrorId::NO_ERROR)) {
+        auto it = errorCodes.find(static_cast<RT::ErrorId>(info.header.errorCode));
+        return "Error: " + (it != errorCodes.end() ? it->second : "Unknown error");
+    } else {
+        return "Success: Write command executed";
+    }
+
+}
+
+std::string FrameInterpreterRt::handleRtExecute(const ResponseInfo& info) 
+{
+    if (info.header.commandType == static_cast<uint8_t>(RT::CommandId::RT_EXECUTE_REPLY)) {
+        if (info.header.errorCode == static_cast<uint8_t>(RT::ErrorId::NO_ERROR)) {
+            return "Success: Execute command executed";
+        } else {
+            auto it = errorCodes.find(static_cast<RT::ErrorId>(info.header.errorCode));
+            return "Error: " + (it != errorCodes.end() ? it->second : "Unknown error");
+        }
+    } else {
+        return "Error: Execute command failed";
+    }
+}
+
+std::string FrameInterpreterRt::handleFocCommand(const ResponseInfo& info, std::optional<ST_MPC::RegisterType> type) 
+{
+    // Debug: print the entire foc frame
     /*
+    std::cout << "FrameInterpreterRt::handleFocCommand()" << std::endl;
     for (const auto& byte : info.payload) {
         std::cout << byteToHex(byte) << " ";
     }
     std::cout << std::endl;
     */
-    return "Success: " + formatValue(info.payload, type);
-}
-
-std::string FrameInterpreterRt::handleRtWrite(const ResponseInfo& info) 
-{
-    // RT_WRITE_REPLY is just an acknowledgment
-    return "Success: Write command executed";
-}
-
-std::string FrameInterpreterRt::handleRtExecute(const ResponseInfo& info) 
-{
-    return "Success: Execute command completed";
-}
-
-std::string FrameInterpreterRt::handleFocCommand(const ResponseInfo& info) 
-{
-    if (info.payload.size() < 2) {  // Minimum: mscId + errorCode
-        return "Error: Invalid FOC response payload size";
-    }
-
-    uint8_t mscId = info.payload[0];
-    uint8_t errorCode = info.payload[1];
 
     // Extract FOC frame: [ack, focPayloadLength, focPayload, focCrc]
     if (info.payload.size() < 4) {  // Minimum FOC frame size
         return "Error: Invalid FOC frame size";
     }
-
+    uint8_t mscId = info.payload[0];
+    uint8_t errorCode = info.payload[1];
     uint8_t ack = info.payload[2];
     uint8_t focPayloadLength = info.payload[3];
-    
-    // Check FOC frame validity
-    if (ack != static_cast<uint8_t>(ST_MPC::AckStatus::Success)) {
-        return "Error: FOC command failed, status: " + byteToHex(ack);
-    }
-
-    // Validate FOC CRC
     std::vector<uint8_t> focFrame(info.payload.begin() + 2, info.payload.end());
+    
+    // Print mscId and error code (if any)
+    std::cout << "mscId: " << byteToHex(mscId) << std::endl;
+    auto it = errorCodes.find(static_cast<RT::ErrorId>(errorCode));
+    if (it->first != RT::ErrorId::NO_ERROR) {
+        std::cout << "Error: " << it->second << std::endl;
+    } else if (it == errorCodes.end()) {
+        std::cout << "Error: Unknown error code: " << byteToHex(errorCode) << std::endl;
+    }
+    // Validate FOC CRC
     if (!validateFocCRC(focFrame)) {
         return "Error: Invalid FOC CRC";
+    }
+
+    // Check FOC frame validity
+    if (ack != static_cast<uint8_t>(ST_MPC::AckStatus::Success)) {
+        if (ack != static_cast<uint8_t>(ST_MPC::AckStatus::Failure)) {
+            return "Error: Invalid FOC ack: " + byteToHex(ack);
+
+        } else {
+            uint8_t errorCode = info.payload[4];
+            auto it = errorCodesFoc.find(static_cast<ST_MPC::AckErrorId>(errorCode));
+            if (it != errorCodesFoc.end()) {
+                return "Error: " + it->second;
+            } else {
+                return "Error: Unknown FOC error code: " + byteToHex(errorCode);
+            }
+        }
     }
 
     // If it's a write response, we're done
@@ -245,53 +272,21 @@ std::string FrameInterpreterRt::handleFocCommand(const ResponseInfo& info)
         return "Success: FOC command executed";
     }
 
-    // For read responses, extract the raw value
-    std::vector<uint8_t> focPayload(info.payload.begin() + 4, 
-                                   info.payload.begin() + 4 + focPayloadLength);
-    
-    std::stringstream ss;
-    ss << "Success: Raw FOC value = ";
-    for (const auto& byte : focPayload) {
-        ss << byteToHex(byte) << " ";
-    }
-    
-    return ss.str();
-}
-
-std::string FrameInterpreterRt::handleFocCommand(const ResponseInfo& info, ST_MPC::RegisterType type) 
-{
-    if (info.payload.size() < 2) {
-        return "Error: Invalid FOC response payload size";
-    }
-
-    uint8_t mscId = info.payload[0];
-    uint8_t errorCode = info.payload[1];
-
-    if (info.payload.size() < 4) {
-        return "Error: Invalid FOC frame size";
-    }
-
-    uint8_t ack = info.payload[2];
-    uint8_t focPayloadLength = info.payload[3];
-    
-    if (ack != static_cast<uint8_t>(ST_MPC::AckStatus::Success)) {
-        return "Error: FOC command failed, status: " + byteToHex(ack);
-    }
-
-    std::vector<uint8_t> focFrame(info.payload.begin() + 2, info.payload.end());
-    if (!validateFocCRC(focFrame)) {
-        return "Error: Invalid FOC CRC";
-    }
-
-    if (focPayloadLength == 0) {
-        return "Success: FOC command executed";
-    }
-
     // Extract value and format according to type
     std::vector<uint8_t> focPayload(info.payload.begin() + 4, 
                                    info.payload.begin() + 4 + focPayloadLength);
-    
-    return "Success: " + formatFocValue(focPayload, type);
+
+    // If type is provided, format the value accordingly
+    if (type.has_value()) {
+        return "Success: " + formatFocValue(focPayload, type.value());
+    } else {
+        std::stringstream ss;
+        ss << "Success: Raw FOC value = ";
+        for (const auto& byte : focPayload) {
+            ss << byteToHex(byte) << " ";
+        }
+        return ss.str();
+    }
 }
 
 std::string FrameInterpreterRt::formatValue(const std::vector<uint8_t>& payload, RT::RegisterType type) const 

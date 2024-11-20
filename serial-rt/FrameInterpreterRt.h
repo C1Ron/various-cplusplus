@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <optional>
 
 class FrameInterpreterRt 
 {
@@ -56,8 +57,7 @@ private:
     std::string handleRtRead(const ResponseInfo& info, RT::RegisterType type = RT::RegisterType::UInt8);
     std::string handleRtWrite(const ResponseInfo& info);
     std::string handleRtExecute(const ResponseInfo& info);
-    std::string handleFocCommand(const ResponseInfo& info);
-    std::string handleFocCommand(const ResponseInfo& info, ST_MPC::RegisterType type);
+    std::string handleFocCommand(const ResponseInfo& info, std::optional<ST_MPC::RegisterType> type = std::nullopt);
 
     // Parsing helpers
     ResponseInfo parseResponse(const std::vector<uint8_t>& response);
@@ -78,7 +78,17 @@ private:
         {RT::ErrorId::NO_MSC, "No MSC"},
         {RT::ErrorId::MSC_NOT_PRESENT, "MSC Not Present"},
         {RT::ErrorId::MSC_TIMEOUT, "MSC Timeout"},
-        {RT::ErrorId::INVALID_MSC, "Invalid MSC"}
+        {RT::ErrorId::INVALID_MSC, "Invalid MSC"},
+        {RT::ErrorId::NO_ERROR, "No Error"}
+    };
+
+    const std::unordered_map<ST_MPC::AckErrorId, std::string> errorCodesFoc = {
+        {ST_MPC::AckErrorId::FrameId, "Frame id"},
+        {ST_MPC::AckErrorId::SetReadOnly, "Read-only register"},
+        {ST_MPC::AckErrorId::GetWriteOnly, "Write-only register"},
+        {ST_MPC::AckErrorId::NoTargetMotor, "No target motor"},
+        {ST_MPC::AckErrorId::OutOfRange, "Out of range"},
+        {ST_MPC::AckErrorId::BadCrc, "Bad CRC"}
     };
 };
 

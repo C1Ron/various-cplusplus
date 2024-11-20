@@ -248,7 +248,10 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleExecute(const std::strin
             // 3. Execute ramp command
             auto execFrame = frameBuilder.buildExecuteFrame(mscId, RT::ExecuteId::RAMP_EXECUTE);
             auto execResponse = sendAndProcessResponse(execFrame);
-            
+
+            if (execResponse.find("Error") != std::string::npos) {
+                return {false, execResponse};
+            }
             return {true, "Ramp command executed successfully"};
         }
         else {

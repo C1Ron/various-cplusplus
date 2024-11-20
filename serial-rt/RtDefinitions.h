@@ -9,7 +9,7 @@ namespace RT
     {
         RAMP_FINAL_SPEED = 0x01,        // INT32
         RAMP_DURATION = 0x02,           // UINT16
-        SPEED_SETPOINT = 0x03,          // INT32
+        SPEED_SETPOINT = 0x03,          // FLOAT
         SPEED_KP = 0x04,                // FLOAT
         SPEED_KI = 0x05,                // FLOAT
         SPEED_KD = 0x06,                // FLOAT
