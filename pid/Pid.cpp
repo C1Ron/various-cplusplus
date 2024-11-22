@@ -5,14 +5,14 @@ PIDController::PIDController(double kp, double ki, double kd, double dt) :
     Ki(ki),
     Kd(kd),
     dt(dt),
-    setpoint(0.0),
+    input(0.0),
     outputMin(-INFINITY),
     outputMax(INFINITY),
     integralLimit(INFINITY),
     error(0.0),
     prevError(0.0),
     integral(0.0),
-    measurement(0.0),
+    feedback(0.0),
     firstRun(true)
 {}
 
@@ -42,9 +42,9 @@ void PIDController::setGains(double kp, double ki, double kd)
     this->Kd = kd;
 }
 
-void PIDController::setSetpoint(double setpoint) 
+void PIDController::setInput(double input) 
 {
-    this->setpoint = setpoint;
+    this->input = input;
 }
 
 void PIDController::setOutputLimits(double min, double max) 
@@ -61,7 +61,7 @@ void PIDController::setIntegralLimit(double limit)
     integralLimit = fabs(limit);
 }
 
-void PIDController::setSampleTime(double newDt) 
+void PIDController::setTimeStep(double newDt) 
 {
     if (newDt > 0) {
         // The smaller the time-step, the smaller the integral term should be
@@ -92,7 +92,7 @@ double PIDController::getError() const
     return error;
 }
 
-double PIDController::getTimestep() const 
+double PIDController::getTimeStep() const 
 {
     return dt;
 }
@@ -102,7 +102,7 @@ void PIDController::reset()
     integral = 0.0;
     error = 0.0;
     prevError = 0.0;
-    measurement = 0.0;
+    feedback = 0.0;
     firstRun = true;
 }
 
@@ -111,16 +111,16 @@ void PIDController::printGains() const
     std::cout << "Kp: " << Kp << ", Ki: " << Ki << ", Kd: " << Kd << std::endl;
 }
 
-double PIDController::update(double m) 
+double PIDController::update(double measurement) 
 {
     // Calculate error
-    double e = setpoint - m;
+    double e = input - measurement;
     
     // Initialize on first run
     if (firstRun) {
         error = e;
         prevError = e;
-        measurement = m;
+        feedback = measurement;
         firstRun = false;
         return 0.0;
     }
@@ -138,7 +138,7 @@ double PIDController::update(double m)
     
     // Store error for next iteration
     error = e;
-    measurement = m;
+    feedback = measurement;
     
     return output;
 }

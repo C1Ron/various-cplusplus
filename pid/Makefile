@@ -9,6 +9,7 @@ BUILD_DIR = build
 # Source files
 SOURCES = main.cpp \
           Pid.cpp \
+		  OpenLoop.cpp \
           SetpointGenerator.cpp \
 		  FirstOrderSystem.cpp \
 		  SecondOrderSystem.cpp \

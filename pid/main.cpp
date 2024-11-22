@@ -1,5 +1,6 @@
 #include <iostream>
 #include "Pid.h"
+#include "OpenLoop.h"
 #include "Simulator.h"
 #include "FirstOrderSystem.h"
 #include "SecondOrderSystem.h"
@@ -19,9 +20,10 @@ int main(int argc, char** argv)
     double m = 1.0, c = 2.0, k = 5.0;
 
     // Create and configure PID controller
-    PIDController pid(Kp, Ki, Kd, dtc);
-    pid.setOutputLimits(-10.0, 10.0);
-    pid.setIntegralLimit(10.0);
+    // PIDController ctrl(Kp, Ki, Kd, dtc);
+    OpenLoop ctrl(dtc);
+    ctrl.setOutputLimits(-10.0, 10.0);
+    // ctrl.setIntegralLimit(10.0);
 
     MassSpringDamper system(m, c, k, 0.0, 0.0, 0.0);
 
@@ -30,7 +32,7 @@ int main(int argc, char** argv)
     auto input = SetpointGenerator::createRamp(0.3, 2.0, 1.0);
 
     // Create and run simulator
-    Simulator simulator(system, pid, input, dt, Tf);
+    Simulator simulator(system, ctrl, input, dt, Tf);
     simulator.run();
     simulator.plot();
 
