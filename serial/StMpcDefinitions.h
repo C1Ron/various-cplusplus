@@ -44,6 +44,7 @@ namespace ST_MPC
         FluxKp = 0x0D,         // U16 (bug in SDK: is S16)
         FluxKi = 0x0E,         // U16 (bug in SDK: is S16)
         FluxKd = 0x0F,         // U16 (bug in SDK: is S16)
+        BusVoltage = 0x19,     // U16
         MotorPower = 0x1B,     // U16
         SpeedMeas = 0x1E,      // S32
         TorqueMeas = 0x1F,     // S16

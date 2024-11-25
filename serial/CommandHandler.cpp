@@ -34,6 +34,7 @@ CommandHandler::CommandHandler(SerialConnection& conn) : connection(conn)
         {"flux-Kp", {ST_MPC::RegisterId::FluxKp, ST_MPC::RegisterType::Int16}},     // bug in SDK: is Int16
         {"flux-Ki", {ST_MPC::RegisterId::FluxKi, ST_MPC::RegisterType::Int16}},     // bug in SDK: is Int16
         {"flux-Kd", {ST_MPC::RegisterId::FluxKd, ST_MPC::RegisterType::Int16}},     // bug in SDK: is Int16
+        {"bus-voltage", {ST_MPC::RegisterId::BusVoltage, ST_MPC::RegisterType::Int16}},
         {"status", {ST_MPC::RegisterId::Status, ST_MPC::RegisterType::UInt8}},
         {"flags",  {ST_MPC::RegisterId::Flags, ST_MPC::RegisterType::UInt32}},
         {"control-mode", {ST_MPC::RegisterId::ControlMode, ST_MPC::RegisterType::UInt8}},
@@ -248,7 +249,21 @@ CommandHandler::CommandResult CommandHandler::handleGetRegister(const std::strin
         auto reg = getRegister(regName);
         auto frame = frameBuilder.buildGetFrame(1, reg.id);
         auto response = sendAndProcessResponse(frame, reg.type);
-        return {true, "Register '" + regName + "' response: " + response};
+        if (regName == "gdr-temp-A" || regName == "gdr-temp-B" || regName == "gdr-temp-C") {
+            std::size_t start = response.find('=') + 1;
+            std::size_t end = response.find('(');
+            std::string value = response.substr(start, end - start);
+            float temp = std::stof(value) * 5.42f / 100.0f - 244.0f;
+            return {true, "Register '" + regName + "' response: " + response + " (" + std::to_string(temp) + " C)"};
+        } else if (regName == "bus-voltage") {
+            std::size_t start = response.find('=') + 1;
+            std::size_t end = response.find('(');
+            std::string value = response.substr(start, end - start);
+            float voltage = std::stof(value) * 5.0f / 0.001635f / 32768.0f;
+            return {true, "Register '" + regName + "' response: " + response + " (" + std::to_string(voltage) + " V)"};
+        } else {
+            return {true, "Register '" + regName + "' response: " + response};
+        }
     }
     catch (const std::exception& e) {
         return handleError("handleGetRegister failed", e);

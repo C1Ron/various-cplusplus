@@ -160,7 +160,7 @@ std::string FrameInterpreter::formatValue(const std::vector<uint8_t>& payload, S
     if (payload.empty()) return "No data";
     
     std::stringstream ss;
-    ss << "Value: ";
+    ss << "Value = ";
     
     switch (type) {
         case ST_MPC::RegisterType::UInt8: {
