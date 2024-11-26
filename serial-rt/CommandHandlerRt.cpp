@@ -25,16 +25,16 @@ CommandHandlerRt::CommandHandlerRt(SerialConnectionRt& conn, uint8_t mscId)
 
     // Initialize register map
     registerMap = {
-        {"ramp-final-speed", {RT::RegisterId::RAMP_FINAL_SPEED, RT::RegisterType::Int32}},
-        {"ramp-duration", {RT::RegisterId::RAMP_DURATION, RT::RegisterType::UInt16}},
-        {"speed-setpoint", {RT::RegisterId::SPEED_SETPOINT, RT::RegisterType::Float}},
-        {"speed-Kp", {RT::RegisterId::SPEED_KP, RT::RegisterType::Float}},
-        {"speed-Ki", {RT::RegisterId::SPEED_KI, RT::RegisterType::Float}},
-        {"speed-Kd", {RT::RegisterId::SPEED_KD, RT::RegisterType::Float}},
-        {"board-info", {RT::RegisterId::BOARD_INFO, RT::RegisterType::CharPtr}},
-        {"current-speed", {RT::RegisterId::CURRENT_SPEED, RT::RegisterType::Float}},
-        {"speed-loop-period", {RT::RegisterId::SPEED_LOOP_PERIOD_MS, RT::RegisterType::UInt32}},
-        {"git-version", {RT::RegisterId::GIT_VERSION, RT::RegisterType::CharPtr}}
+        {"rt-ramp-final-speed", {RT::RegisterId::RAMP_FINAL_SPEED, RT::RegisterType::Int32}},
+        {"rt-ramp-duration", {RT::RegisterId::RAMP_DURATION, RT::RegisterType::UInt16}},
+        {"rt-speed-ref", {RT::RegisterId::SPEED_SETPOINT, RT::RegisterType::Float}},
+        {"rt-speed-Kp", {RT::RegisterId::SPEED_KP, RT::RegisterType::Float}},
+        {"rt-speed-Ki", {RT::RegisterId::SPEED_KI, RT::RegisterType::Float}},
+        {"rt-speed-Kd", {RT::RegisterId::SPEED_KD, RT::RegisterType::Float}},
+        {"rt-board-info", {RT::RegisterId::BOARD_INFO, RT::RegisterType::CharPtr}},
+        {"rt-speed-meas", {RT::RegisterId::CURRENT_SPEED, RT::RegisterType::Float}},
+        {"rt-speed-loop-period", {RT::RegisterId::SPEED_LOOP_PERIOD_MS, RT::RegisterType::UInt32}},
+        {"rt-git-version", {RT::RegisterId::GIT_VERSION, RT::RegisterType::CharPtr}}
     };
 
     // Initialize execute map
@@ -306,7 +306,34 @@ CommandHandlerRt::CommandResult CommandHandlerRt::handleFocRead(const std::strin
         const auto& reg = it->second;
         auto frame = frameBuilder.buildFocReadFrame(mscId, reg.id);
         std::string response = sendAndProcessResponse(frame, reg.type);
-        return {true, response};
+        if (regName == "gdr-temp-A" || regName == "gdr-temp-B" || regName == "gdr-temp-C") {
+            std::size_t start = response.find('=') + 1;
+            std::size_t end = response.find('(');
+            std::string value = response.substr(start, end - start);
+            float temp = std::stof(value) * 5.42f / 100.0f - 244.0f;
+            return {true, response + " (" + std::to_string(temp) + " C)"};
+        } else if (regName == "bus-voltage") {
+            std::size_t start = response.find('=') + 1;
+            std::size_t end = response.find('(');
+            std::string value = response.substr(start, end - start);
+            float voltage = std::stof(value) * 5.0f / 0.001635f / 65536.0f;
+            return {true, response + " (" + std::to_string(voltage) + " V)"};
+        } else if (regName == "control-mode") {
+            std::size_t start = response.find('=') + 1;
+            std::size_t end = response.find('(');
+            std::string value = response.substr(start, end - start);
+            int mode = std::stoi(value);
+            if (mode == 0) {
+                return {true, response + " (Torque)"};
+            } else if (mode == 1) {
+                return {true, response + " (Speed)"};
+            } else {
+                return {true, response + " (Unknown)"};
+            }
+        } else {
+            return {true, response};
+        }
+        
     }
     catch (const std::exception& e) {
         return handleError("FOC read failed", e);

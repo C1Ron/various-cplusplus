@@ -259,8 +259,20 @@ CommandHandler::CommandResult CommandHandler::handleGetRegister(const std::strin
             std::size_t start = response.find('=') + 1;
             std::size_t end = response.find('(');
             std::string value = response.substr(start, end - start);
-            float voltage = std::stof(value) * 5.0f / 0.001635f / 32768.0f;
+            float voltage = std::stof(value) * 5.0f / 0.001635f / 65536.0f;
             return {true, "Register '" + regName + "' response: " + response + " (" + std::to_string(voltage) + " V)"};
+        } else if (regName == "control-mode") {
+            std::size_t start = response.find('=') + 1;
+            std::size_t end = response.find('(');
+            std::string value = response.substr(start, end - start);
+            int mode = std::stoi(value);
+            if (mode == 0) {
+                return {true, "Register '" + regName + "' response: " + response + " (Torque)"};
+            } else if (mode == 1) {
+                return {true, "Register '" + regName + "' response: " + response + " (Speed)"};
+            } else {
+                return {true, "Register '" + regName + "' response: " + response + " (Unknown)"};
+            }
         } else {
             return {true, "Register '" + regName + "' response: " + response};
         }

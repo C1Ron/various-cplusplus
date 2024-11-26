@@ -20,7 +20,7 @@ def animateFunc(i):
         ax1.clear()
         ax2.clear()
         ax3.clear()
-        ax1.set_ylim([-2000, 2000])
+        ax1.set_ylim([-1000, 1000])
         ax2.set_ylim([-25000, 25000])
         ax3.set_ylim([-1000, 25000])
         ax1.plot(t[-sx:], speed[-sx:], '-o', ms = 2)
